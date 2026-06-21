@@ -58,7 +58,7 @@
 
 | 裝置 | **難在哪（具體原因）** | 缺的關鍵 | 框架 |
 |------|------------------------|----------|------|
-| **WiFi（CYW43455）** | ① 802.11 協定層在 OS（Linux=cfg80211/mac80211），Windows=**WiFiCx/WDI**，**架構完全不同、無源碼可移植**；brcmfmac 只是接 Linux stack 的薄橋 ② 還要 SDIO function driver ③ 韌體 blob 載入 ④ ARM64 至今**無現成可用驅動** | 整個 WiFiCx miniport（獨立專案級） | NDIS 802.11 / WiFiCx |
+| **WiFi（CYW43455）** | ① 802.11 協定層在 OS（Linux=cfg80211/mac80211 vs Windows=WiFiCx/WDI，架構不同、無源碼可直接移植）② SDIO function driver ③ 韌體 blob 載入 ④ ARM64 無現成驅動。**但有捷徑**：CYW43455 是 FullMAC → 用 **Infineon WHD + 包成 NetAdapterCx 偽裝乙太網卡**，避開整個 WLAN stack，**~2-3 人月（非獨立專案級）**，有明確落地步驟 | WHD library + SDIO function driver（不必碰 WiFiCx）| NetAdapterCx（偽裝 Ethernet）|
 | **V3D GPU** | GPU 驅動是「兩半」：**KMD（WDDM 排程/記憶體）+ UMD（把 D3D/OpenGL/Vulkan 編成 V3D 指令，等同移植 Mesa）**，兩半都巨大；Windows 無對應物 | WDDM KMD + UMD（Mesa 移植） | WDDM |
 | **HDMI / HVS / 顯示管線** | 要完整 **WDDM**（modeset/present/電源…整套 DDI 合約），與 Linux DRM/KMS 架構不同；HDMI 不能單獨運作，要連 HVS+PixelValve 整條 | 完整 WDDM display miniport | WDDM |
 | **相機 CSI / ISP（PiSP）** | **AVStream（KS filter/pin）+ 影像流水線**（CSI 收流、ISP 去馬賽克/降噪、DMA buffer 佇列、sensor I2C 控制）整套；ks.h 還要 C++ 編譯踩雷 | AVStream capture 完整實作 | AVStream / MFT |
@@ -79,6 +79,6 @@
 > **好移植 = 標準 IP + 薄框架/可借 inbox（HAL 是大頭）；難移植 = 平台專屬的龐大協定堆疊（OS 介接是大頭、無源碼可抄）。**
 > 有 Linux 源碼對前者幫助巨大（幾乎可沿用），對後者只幫到一小塊（晶片控制），真正的山還是要自己爬。
 
-相關：WiFi 的開源參考資源（WiFiCx / NetAdapterCx / brcmfmac / nexmon / worproject）整理見對話紀錄；
+相關：**WiFi 的完整移植研究 + 可落地實作指南** → [`wifi/`](wifi/)（策略、開源資源、WHD/SDIO/NetAdapterCx 實作、陷阱）；
 判別原則的完整版見教學書 [`../teachbook/02-linux-vs-windows-driver-model.md`](../teachbook/02-linux-vs-windows-driver-model.md)
 與 [`../teachbook/08-hardware-truth-and-ab-gaps.md`](../teachbook/08-hardware-truth-and-ab-gaps.md)。
