@@ -23,6 +23,7 @@ brcmfmac 只是接 Linux stack 的薄橋。但 **CYW43455 是 FullMAC**——WPA
 |------|------|
 | [`01-strategy-and-references.md`](01-strategy-and-references.md) | 策略全貌 + **所有開源參考資源 / SOURCES**（WHD、Zephyr porting 範本、Fuchsia、FreeBSD、firmware、MS 文件）|
 | [`02-implementation-guide.md`](02-implementation-guide.md) | **可落地實作指南**：WHD 接進 kernel（cy_rtos/cyhal 對應）、SDIO function driver（CMD52/53）、OOB GPIO+ACPI、NetAdapterCx 資料路徑、分層圖、bring-up 順序 |
+| [`04-deep-dives.md`](04-deep-dives.md) | **深度實作細節**（6 輪追問整合）：WHD porting 函式清單+Zephyr 對照、top-level 序列、封包交接、讀 Chip ID、NetAdapterCx 全套、韌體嵌入/NVRAM、**build 整合(CRT stub/macro/地雷)**、連線/憑證/斷線 |
 | [`03-pitfalls-and-open-questions.md`](03-pitfalls-and-open-questions.md) | **陷阱清單**（NVRAM 格式、DMA coherency、IRQL 邊界、電源）+ 待實機確認的未知數 + 備案 |
 
 ## 現況
