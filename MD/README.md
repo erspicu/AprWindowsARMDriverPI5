@@ -1,6 +1,19 @@
-# MD — 分析筆記與文件
+# MD — 文件
 
-移植過程的設計筆記、進度狀態與各階段 know-how。
+移植過程的文件，分三類子目錄：
+
+| 子目錄 | 用途 |
+|--------|------|
+| [`Note/`](Note/) | 各階段 **know-how 筆記**（檔名 `年月日-時間-主題.md`）+ 進度/清單核心文件。 |
+| [`Skill/`](Skill/) | **操作型 how-to**（建置工具鏈、Pi5 SSH 硬體萃取…），CLAUDE.md 細節引導至此。 |
+| [`History/`](History/) | **開發歷程**（已完成/解除的自動移植 loop 紀錄）。 |
+
+## Skill（操作 how-to）
+
+| 檔案 | 內容 |
+|------|------|
+| [`Skill/build-toolchain.md`](Skill/build-toolchain.md) | x64→ARM64 交叉編譯、cl/link 配方、x64 sim、ASL/INF。 |
+| [`Skill/pi5-ssh-hardware-facts.md`](Skill/pi5-ssh-hardware-facts.md) | Pi5 SSH 連線法、唯讀安全規則、規格缺漏 A/B 判別、已萃取硬體事實。 |
 
 ## 核心文件（單一真相來源）
 
