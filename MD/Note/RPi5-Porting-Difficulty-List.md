@@ -66,6 +66,7 @@
 | **Bluetooth（CYW43455 BT）** | **其實比想像簡單（比 WiFi 低一個數量級）**：HCI 是標準協定、inbox **`bthport.sys` 全包上層**；你只寫一個 **Bluetooth Extensible Transport Driver**（H4 byte-stream 搬運 + BCM `.hcd` 韌體載入 + baud 切換）。`bthx.h` **就在標準 WDK**（先前「缺 SDK」不成立）。**~1-1.5 人月**，有明確 5 步 bring-up。詳見 [`bluetooth/`](bluetooth/) | KMDF transport driver（接 inbox bthport）| bthport（BTHX）|
 | **IOMMU / SMMU** | **其實不寫驅動**：Windows ARM64 內建 SMMUv2 支援。「移植」＝**把 BCM2712 MMU-500(SMMUv2) 寫進 ACPI IORT**（UEFI/EDK2），HAL 自動建 DMA 映射；driver 只用 WDF DMA。難在 debug ACPI + 是**所有 PCIe/RP1 DMA 的先決條件**。詳見 [`iommu/`](iommu/) | ACPI IORT（非 .sys）| HAL 內建 |
 | **多顯示輸出（HDMI×2/DSI/VEC/DPI）** | 都騎同套 DOD/WDDM，靠 **VidPN** 表達多 head。**HDMI1 最划算**（+10-20%，雙螢幕）；DSI niche（+100-150%，要 MIPI DCS 面板初始化）；VEC 極 niche（+40%）；**DPI Pi5 已淘汰**（GPIO 在 RP1）。觸控走獨立 I2C HID(PNP0C50)。詳見 [`display-outputs/`](display-outputs/) | DOD 多 head + DSI 面板序列 | WDDM |
+| **HDMI 音訊** | **獨立一塊**（非顯示副產品）：自寫 **PortCls + WaveRT miniport**，DMA 走 BCM2712（不碰 PCIe/IOMMU）餵 MAI FIFO，**經 private interface 叫 DOD 設 ACR/InfoFrame**（跟 pixel clock 耦合）。Pi5 無類比孔 → HDMI 是主要內建出聲。**~2-4 人月**。詳見 [`hdmi-audio/`](hdmi-audio/) | PortCls/WaveRT + DOD private interface | PortCls |
 
 ### 難移植的共同特徵（一眼判斷）
 - **OS 框架是一整套協定堆疊**（WiFiCx 的 802.11、WDDM 的顯示/GPU、AVStream 的影像）——這層平台專屬、**Linux 源碼裡沒有對應物可抄**。

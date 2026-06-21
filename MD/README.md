@@ -30,6 +30,7 @@
 | [`Note/camera/`](Note/camera/) | **相機（CSI-2/PiSP）移植專題**：Sensor→RP1 CFE→ISP 鏈、AVStream + DeviceMFT 軟體 ISP 路線、WoA PCIe DMA/IOMMU 關鍵、5 步里程碑。|
 | [`Note/iommu/`](Note/iommu/) | **IOMMU/SMMU 移植專題**：釐清「不寫驅動，是寫 ACPI IORT」、BCM2712 MMU-500、IORT 三 node、所有 PCIe DMA 的先決條件。|
 | [`Note/display-outputs/`](Note/display-outputs/) | **多顯示輸出專題**：HDMI×2/DSI/VEC/DPI 在 WDDM 的多 head(VidPN)、DSI 面板初始化、觸控 I2C HID、優先序（HDMI1 最划算）。|
+| [`Note/hdmi-audio/`](Note/hdmi-audio/) | **HDMI 音訊專題**：PortCls/WaveRT miniport、MAI/ACR、與 DOD 的 private interface 耦合、「嗶一聲」里程碑。|
 
 ## 重點 know-how 筆記
 
