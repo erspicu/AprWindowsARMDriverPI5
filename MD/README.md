@@ -27,6 +27,7 @@
 | [`Note/bluetooth/`](Note/bluetooth/) | **藍牙（CYW43455 BT）移植專題**：bthx transport driver 路線、BCM .hcd 韌體、ACPI、bring-up 里程碑。|
 | [`Note/gpu/`](Note/gpu/) | **V3D GPU（VideoCore VII）移植專題**：WDDM 架構、DOD 點亮畫面、**重用 Mesa(v3d/v3dv) + DXVK 玩家加速路線**、知識邊界誠實劃分。|
 | [`Note/hevc/`](Note/hevc/) | **HEVC 硬解（rpivid）移植專題**：Pi5 codec 涵蓋真相（HEVC only，非 YouTube）、KMDF + 獨立 MFT 路線、stateless 解碼/SAND、整合現實。|
+| [`Note/camera/`](Note/camera/) | **相機（CSI-2/PiSP）移植專題**：Sensor→RP1 CFE→ISP 鏈、AVStream + DeviceMFT 軟體 ISP 路線、WoA PCIe DMA/IOMMU 關鍵、5 步里程碑。|
 
 ## 重點 know-how 筆記
 
