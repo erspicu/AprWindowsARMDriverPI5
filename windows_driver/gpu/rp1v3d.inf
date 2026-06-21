@@ -1,0 +1,51 @@
+;
+; rp1v3d.inf - RP1/V3D (VideoCore VII) WDDM render KMD, ACPI-enumerated.
+; PnP ID ACPI\RPI5V3D0 (placeholder for the V3D GPU device). Render KMD; a
+; functional 3D stack also needs a user-mode D3D driver (UMD).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Display
+ClassGuid   = {4D36E968-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1v3d.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1v3d.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%v3d.DeviceDesc% = v3d_Device, ACPI\RPI5V3D0
+
+[v3d_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1v3d.sys
+
+[v3d_Device.NT.Services]
+AddService = rp1v3d, 2, v3d_Service
+
+[v3d_Service]
+DisplayName   = %v3d.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1v3d.sys
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "RP1 V3D Installation Disk"
+v3d.DeviceDesc   = "VideoCore VII V3D (WDDM render)"
+v3d.SvcDesc      = "RP1 V3D Render Driver"

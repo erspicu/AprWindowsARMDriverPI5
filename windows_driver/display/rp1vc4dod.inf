@@ -1,0 +1,50 @@
+;
+; rp1vc4dod.inf - RP1/VC4 Display-Only WDDM driver (DOD), ACPI-enumerated.
+; PnP ID ACPI\RPI5VC4D (placeholder for the HDMI display device).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Display
+ClassGuid   = {4D36E968-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1vc4dod.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1vc4dod.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%dod.DeviceDesc% = dod_Device, ACPI\RPI5VC4D
+
+[dod_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1vc4dod.sys
+
+[dod_Device.NT.Services]
+AddService = rp1vc4dod, 2, dod_Service
+
+[dod_Service]
+DisplayName   = %dod.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1vc4dod.sys
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "RP1 Display Installation Disk"
+dod.DeviceDesc   = "RP1/VC4 Display (Display-Only WDDM)"
+dod.SvcDesc      = "RP1 VC4 Display-Only Driver"

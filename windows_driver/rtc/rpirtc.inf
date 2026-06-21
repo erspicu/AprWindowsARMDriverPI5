@@ -1,0 +1,57 @@
+;
+; rpirtc.inf - Raspberry Pi firmware RTC (bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\BCM2EB6 = rp1.asl RTC0 _HID. No MMIO: time get/set proxied via the
+; VideoCore mailbox firmware property channel (bcmmbox). rpi_rtc on Pi5.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rpirtc.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rpirtc.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rpirtc.DeviceDesc% = rpirtc_Device, ACPI\BCM2EB6
+
+[rpirtc_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rpirtc.sys
+
+[rpirtc_Device.NT.Services]
+AddService = rpirtc, 2, rpirtc_Service
+
+[rpirtc_Service]
+DisplayName   = %rpirtc.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rpirtc.sys
+
+[rpirtc_Device.NT.Wdf]
+KmdfService = rpirtc, rpirtc_wdfsect
+
+[rpirtc_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "RPi RTC Installation Disk"
+rpirtc.DeviceDesc  = "Raspberry Pi Firmware RTC"
+rpirtc.SvcDesc     = "RPi RTC (KMDF)"

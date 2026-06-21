@@ -1,0 +1,56 @@
+;
+; rp1clk.inf - RP1 clock generator / PLLs (bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\RPI5000D matches rp1.asl CLK0 _HID. reg @BAR1+0x18000.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1clk.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1clk.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1clk.DeviceDesc% = rp1clk_Device, ACPI\RPI5000D
+
+[rp1clk_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1clk.sys
+
+[rp1clk_Device.NT.Services]
+AddService = rp1clk, 2, rp1clk_Service
+
+[rp1clk_Service]
+DisplayName   = %rp1clk.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1clk.sys
+
+[rp1clk_Device.NT.Wdf]
+KmdfService = rp1clk, rp1clk_wdfsect
+
+[rp1clk_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "RP1 Clock Installation Disk"
+rp1clk.DeviceDesc  = "RP1 Clock Generator"
+rp1clk.SvcDesc     = "RP1 Clocks (KMDF)"

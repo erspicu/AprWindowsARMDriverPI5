@@ -1,0 +1,57 @@
+;
+; bcmdma.inf - BCM2712 legacy DMA (bcm2835-dma, bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\BCM2EB3 = rp1.asl DMAC _HID. reg @0x1000010000, GIC GSIV 119-122.
+; NOTE: distinct from RP1 dw-axi-dmac (ACPI DMA0/RPI5000A, RP1 IRQ 40).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = bcmdma.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+bcmdma.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%bcmdma.DeviceDesc% = bcmdma_Device, ACPI\BCM2EB3
+
+[bcmdma_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+bcmdma.sys
+
+[bcmdma_Device.NT.Services]
+AddService = bcmdma, 2, bcmdma_Service
+
+[bcmdma_Service]
+DisplayName   = %bcmdma.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\bcmdma.sys
+
+[bcmdma_Device.NT.Wdf]
+KmdfService = bcmdma, bcmdma_wdfsect
+
+[bcmdma_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "BCM2712 DMA Installation Disk"
+bcmdma.DeviceDesc  = "BCM2712 DMA Controller"
+bcmdma.SvcDesc     = "BCM2712 DMA (KMDF)"

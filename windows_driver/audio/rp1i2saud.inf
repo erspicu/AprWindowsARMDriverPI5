@@ -1,0 +1,78 @@
+;
+; rp1i2saud.inf - RP1 I2S PortCls/WaveRT render audio driver (ARM64).
+; Placeholder hardware id ACPI\RPI5I2S0 (see Phase 1 note re: RP1->PCIe/ACPI).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderName%
+CatalogFile = rp1i2saud.cat
+PnpLockdown = 1
+DriverVer = 06/21/2026,1.0.0.0
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+rp1i2saud.sys = 1
+
+[Manufacturer]
+%ProviderName% = AudioDevice,NTARM64
+
+[AudioDevice.NTARM64]
+%DeviceDesc% = Rp1Aud_Install, ACPI\RPI5I2S0
+
+[Rp1Aud_Install.NT]
+Include   = ks.inf, wdmaudio.inf
+Needs     = KS.Registration, WDMAUDIO.Registration
+CopyFiles = Rp1Aud_CopyFiles
+
+[Rp1Aud_CopyFiles]
+rp1i2saud.sys
+
+[Rp1Aud_Install.NT.Services]
+AddService = rp1i2saud, 0x00000002, Rp1Aud_Service
+
+[Rp1Aud_Service]
+DisplayName   = %SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1i2saud.sys
+
+[Rp1Aud_Install.NT.Interfaces]
+AddInterface = %KSCATEGORY_AUDIO%,  %KSNAME_Wave%, Rp1Aud_WaveIface
+AddInterface = %KSCATEGORY_RENDER%, %KSNAME_Wave%, Rp1Aud_WaveIface
+AddInterface = %KSCATEGORY_AUDIO%,  %KSNAME_Topo%, Rp1Aud_TopoIface
+AddInterface = %KSCATEGORY_TOPOLOGY%,%KSNAME_Topo%, Rp1Aud_TopoIface
+
+[Rp1Aud_WaveIface]
+AddReg = Rp1Aud_WaveIface.AddReg
+[Rp1Aud_WaveIface.AddReg]
+HKR,,FriendlyName,,%WaveFriendly%
+HKR,,CLSID,,%Proxy.CLSID%
+
+[Rp1Aud_TopoIface]
+AddReg = Rp1Aud_TopoIface.AddReg
+[Rp1Aud_TopoIface.AddReg]
+HKR,,FriendlyName,,%TopoFriendly%
+HKR,,CLSID,,%Proxy.CLSID%
+
+[Strings]
+ProviderName        = "AprWindowsDriver"
+DiskName            = "RP1 I2S Audio Install Disk"
+DeviceDesc          = "RP1 I2S Audio (PortCls/WaveRT, Phase 2)"
+SvcDesc             = "RP1 I2S Audio Service"
+WaveFriendly        = "RP1 I2S Wave"
+TopoFriendly        = "RP1 I2S Topology"
+Proxy.CLSID         = "{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO    = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER   = "{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_TOPOLOGY = "{DDA54A40-1E4C-11D1-A050-405705C10000}"
+KSNAME_Wave         = "Wave"
+KSNAME_Topo         = "Topology"
+

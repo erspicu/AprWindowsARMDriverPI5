@@ -1,0 +1,56 @@
+;
+; rp1i2c.inf - RP1 DesignWare I2C controller (SpbCx / KMDF), ACPI-enumerated.
+; PnP ID ACPI\RPI50001 matches rp1.asl I2C0..6 _HID.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1i2c.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1i2c.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1i2c.DeviceDesc% = rp1i2c_Device, ACPI\RPI50001
+
+[rp1i2c_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1i2c.sys
+
+[rp1i2c_Device.NT.Services]
+AddService = rp1i2c, 2, rp1i2c_Service
+
+[rp1i2c_Service]
+DisplayName    = %rp1i2c.SvcDesc%
+ServiceType    = 1
+StartType      = 3
+ErrorControl   = 1
+ServiceBinary  = %13%\rp1i2c.sys
+
+[rp1i2c_Device.NT.Wdf]
+KmdfService = rp1i2c, rp1i2c_wdfsect
+
+[rp1i2c_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "RP1 I2C Installation Disk"
+rp1i2c.DeviceDesc = "RP1 DesignWare I2C Controller"
+rp1i2c.SvcDesc    = "RP1 I2C (SpbCx)"

@@ -1,0 +1,50 @@
+;
+; rp1sd.inf - RP1/BCM2712 SD/MMC host (SdPort miniport), ACPI-enumerated.
+; PnP ID ACPI\RPI50009 matches rp1.asl SDC0/1 _HID. SdPort miniport (not KMDF).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = SDHost
+ClassGuid   = {A0A588A4-C46F-4B37-B7EA-C82FE89870C6}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1sd.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1sd.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1sd.DeviceDesc% = rp1sd_Device, ACPI\RPI50009
+
+[rp1sd_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1sd.sys
+
+[rp1sd_Device.NT.Services]
+AddService = rp1sd, 2, rp1sd_Service
+
+[rp1sd_Service]
+DisplayName   = %rp1sd.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1sd.sys
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "RP1 SD/MMC Installation Disk"
+rp1sd.DeviceDesc = "RP1/BCM2712 SD Host Controller"
+rp1sd.SvcDesc    = "RP1 SD/MMC (SdPort)"

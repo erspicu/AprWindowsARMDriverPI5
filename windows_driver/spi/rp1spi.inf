@@ -1,0 +1,56 @@
+;
+; rp1spi.inf - RP1 DesignWare SPI controller (SpbCx / KMDF), ACPI-enumerated.
+; PnP ID ACPI\RPI50002 matches rp1.asl SPI0..5 _HID.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1spi.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1spi.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1spi.DeviceDesc% = rp1spi_Device, ACPI\RPI50002
+
+[rp1spi_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1spi.sys
+
+[rp1spi_Device.NT.Services]
+AddService = rp1spi, 2, rp1spi_Service
+
+[rp1spi_Service]
+DisplayName   = %rp1spi.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1spi.sys
+
+[rp1spi_Device.NT.Wdf]
+KmdfService = rp1spi, rp1spi_wdfsect
+
+[rp1spi_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName      = "RPi5 WoA Port"
+ManufacturerName  = "Raspberry Pi"
+DiskName          = "RP1 SPI Installation Disk"
+rp1spi.DeviceDesc = "RP1 DesignWare SPI Controller"
+rp1spi.SvcDesc    = "RP1 SPI (SpbCx)"

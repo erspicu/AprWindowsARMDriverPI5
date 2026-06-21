@@ -1,0 +1,56 @@
+;
+; rp1pio.inf - RP1 PIO (programmable IO) block (bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\RPI5000C matches rp1.asl PIO0 _HID. reg @BAR1+0x178000.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1pio.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1pio.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1pio.DeviceDesc% = rp1pio_Device, ACPI\RPI5000C
+
+[rp1pio_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1pio.sys
+
+[rp1pio_Device.NT.Services]
+AddService = rp1pio, 2, rp1pio_Service
+
+[rp1pio_Service]
+DisplayName   = %rp1pio.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1pio.sys
+
+[rp1pio_Device.NT.Wdf]
+KmdfService = rp1pio, rp1pio_wdfsect
+
+[rp1pio_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "RP1 PIO Installation Disk"
+rp1pio.DeviceDesc  = "RP1 Programmable IO (PIO)"
+rp1pio.SvcDesc     = "RP1 PIO (KMDF)"

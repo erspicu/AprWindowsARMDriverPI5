@@ -1,0 +1,56 @@
+;
+; rp1pwm.inf - RP1 PWM controller (bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\RPI50005 matches rp1.asl PWM0/PWM1 _HID. reg @BAR1+0x9C000.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1pwm.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1pwm.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1pwm.DeviceDesc% = rp1pwm_Device, ACPI\RPI50005
+
+[rp1pwm_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1pwm.sys
+
+[rp1pwm_Device.NT.Services]
+AddService = rp1pwm, 2, rp1pwm_Service
+
+[rp1pwm_Service]
+DisplayName   = %rp1pwm.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1pwm.sys
+
+[rp1pwm_Device.NT.Wdf]
+KmdfService = rp1pwm, rp1pwm_wdfsect
+
+[rp1pwm_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "RP1 PWM Installation Disk"
+rp1pwm.DeviceDesc  = "RP1 PWM Controller"
+rp1pwm.SvcDesc     = "RP1 PWM (KMDF)"

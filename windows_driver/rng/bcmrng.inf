@@ -1,0 +1,56 @@
+;
+; bcmrng.inf - BCM2712 hardware RNG (iproc-rng200, bespoke KMDF), ACPI-enumerated.
+; PnP ID ACPI\BCM2EB1 = rp1.asl RNG0 _HID. reg @0x107D208000 (polled FIFO, no IRQ).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = bcmrng.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+bcmrng.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%bcmrng.DeviceDesc% = bcmrng_Device, ACPI\BCM2EB1
+
+[bcmrng_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+bcmrng.sys
+
+[bcmrng_Device.NT.Services]
+AddService = bcmrng, 2, bcmrng_Service
+
+[bcmrng_Service]
+DisplayName   = %bcmrng.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\bcmrng.sys
+
+[bcmrng_Device.NT.Wdf]
+KmdfService = bcmrng, bcmrng_wdfsect
+
+[bcmrng_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "BCM2712 RNG Installation Disk"
+bcmrng.DeviceDesc  = "BCM2712 Hardware RNG"
+bcmrng.SvcDesc     = "BCM2712 RNG (KMDF)"

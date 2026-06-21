@@ -1,0 +1,38 @@
+# Upstream reference (NOT part of this project).
+# Raspberry Pi Linux kernel sparse checkout (~1.5 GB, has its own .git); used
+# only as a porting reference. Clone separately, do not version it here.
+/sources/
+
+# Scratch / private / session state
+/temp/
+/private/
+/.claude/
+
+# MSVC / WDK build output (reproducible from source)
+**/build/
+*.obj
+*.pdb
+*.exe
+*.ilk
+*.exp
+*.lib
+*.res
+*.sys
+*.cat
+*.aml
+*.tlog
+*.lastbuildstate
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Gemini knowledge-base tool: keep the template, drop the real key + logs
+tools/knowledgebase/config.json
+tools/knowledgebase/message/
+tools/knowledgebase/*.pdb
+
+# OS cruft
+Thumbs.db
+.DS_Store

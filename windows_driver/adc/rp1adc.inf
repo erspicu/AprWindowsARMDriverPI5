@@ -1,0 +1,57 @@
+;
+; rp1adc.inf - RP1 SAR ADC (bespoke KMDF function driver), ACPI-enumerated.
+; PnP ID ACPI\RPI5000B matches rp1.asl ADC0 _HID. Register block @BAR1+0xC8000,
+; one-shot polled conversion (READY bit) -> no interrupt resource.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1adc.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1adc.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%rp1adc.DeviceDesc% = rp1adc_Device, ACPI\RPI5000B
+
+[rp1adc_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1adc.sys
+
+[rp1adc_Device.NT.Services]
+AddService = rp1adc, 2, rp1adc_Service
+
+[rp1adc_Service]
+DisplayName   = %rp1adc.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1adc.sys
+
+[rp1adc_Device.NT.Wdf]
+KmdfService = rp1adc, rp1adc_wdfsect
+
+[rp1adc_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName       = "RPi5 WoA Port"
+ManufacturerName   = "Raspberry Pi"
+DiskName           = "RP1 ADC Installation Disk"
+rp1adc.DeviceDesc  = "RP1 SAR ADC"
+rp1adc.SvcDesc     = "RP1 ADC (KMDF)"

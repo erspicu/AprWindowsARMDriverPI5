@@ -1,0 +1,55 @@
+;
+; rp1i2s.inf - RP1 DesignWare I2S (Phase 1 WDM skeleton), ARM64
+;
+; NOTE: ACPI\RPI5I2S0 is a PLACEHOLDER hardware id. The real device sits under
+; RP1 -> PCIe and is not yet enumerable on Windows; once the platform ACPI
+; describes the I2S block (MMIO _CRS), set the matching id here. For pure
+; load-testing without hardware the service can also be started as a software
+; device.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Media
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderName%
+CatalogFile = rp1i2s.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+rp1i2s.sys = 1
+
+[Manufacturer]
+%ProviderName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%DeviceDesc% = Rp1I2s_Install, ACPI\RPI5I2S0
+
+[Rp1I2s_Install.NT]
+CopyFiles = Rp1I2s_CopyFiles
+
+[Rp1I2s_CopyFiles]
+rp1i2s.sys
+
+[Rp1I2s_Install.NT.Services]
+AddService = rp1i2s, %SPSVCINST_ASSOCSERVICE%, Rp1I2s_Service
+
+[Rp1I2s_Service]
+DisplayName   = %SvcDesc%
+ServiceType   = 1   ; SERVICE_KERNEL_DRIVER
+StartType     = 3   ; SERVICE_DEMAND_START
+ErrorControl  = 1   ; SERVICE_ERROR_NORMAL
+ServiceBinary = %13%\rp1i2s.sys
+
+[Strings]
+ProviderName           = "AprWindowsDriver"
+DiskName               = "RP1 I2S Install Disk"
+DeviceDesc             = "RP1 DesignWare I2S (Phase 1 WDM skeleton)"
+SvcDesc                = "RP1 I2S Service"
+SPSVCINST_ASSOCSERVICE = 0x00000002

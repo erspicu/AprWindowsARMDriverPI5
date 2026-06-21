@@ -1,0 +1,56 @@
+;
+; btbcm.inf - BCM43438 Bluetooth UART HCI transport (KMDF).
+; PnP ID ACPI\BCM2EA0 (placeholder for the UART-attached BT radio node).
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Bluetooth
+ClassGuid   = {E0CBF06C-CD8B-4647-BB8A-263B43F0F974}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = btbcm.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+btbcm.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%bt.DeviceDesc% = bt_Device, ACPI\BCM2EA0
+
+[bt_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+btbcm.sys
+
+[bt_Device.NT.Services]
+AddService = btbcm, 2, bt_Service
+
+[bt_Service]
+DisplayName   = %bt.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\btbcm.sys
+
+[bt_Device.NT.Wdf]
+KmdfService = btbcm, bt_wdfsect
+
+[bt_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "BCM43438 Bluetooth Installation Disk"
+bt.DeviceDesc    = "BCM43438 Bluetooth (UART HCI)"
+bt.SvcDesc       = "BCM43438 Bluetooth Transport"

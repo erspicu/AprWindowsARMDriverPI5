@@ -1,0 +1,50 @@
+;
+; rp1cfe.inf - RP1 CFE camera (AVStream minidriver), ACPI-enumerated.
+; PnP ID ACPI\RPI50008 matches rp1.asl CSI0/1 _HID. Capture filter not yet built.
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Camera
+ClassGuid   = {CA3E7AB9-B4C3-4AE6-8251-579EF933890F}
+Provider    = %ProviderName%
+DriverVer   = 06/21/2026,1.0.0.0
+CatalogFile = rp1cfe.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+rp1cfe.sys = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%cfe.DeviceDesc% = cfe_Device, ACPI\RPI50008
+
+[cfe_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+rp1cfe.sys
+
+[cfe_Device.NT.Services]
+AddService = rp1cfe, 2, cfe_Service
+
+[cfe_Service]
+DisplayName   = %cfe.SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\rp1cfe.sys
+
+[Strings]
+ProviderName     = "RPi5 WoA Port"
+ManufacturerName = "Raspberry Pi"
+DiskName         = "RP1 Camera Installation Disk"
+cfe.DeviceDesc   = "RP1 CFE Camera (AVStream)"
+cfe.SvcDesc      = "RP1 CFE Camera"
