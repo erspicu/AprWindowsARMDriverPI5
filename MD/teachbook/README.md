@@ -39,7 +39,7 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | A2 | VideoCore 韌體介面 / Mailbox | KMDF | 🔲 |
 | A3 | BCM2712 clocks / power | 韌體/ACPI | 🔲 |
 | A4 | GIC-400 / L2 中斷控制器 | ACPI MADT | 🔲 |
-| A5 | SDHCI（SD/eMMC） | SdPort | 🔲 |
+| A5 | [SDHCI（SD/eMMC）](A05-sdhci-sdport.md) | SdPort | ✅ |
 | A6 | BCM2712 GPIO / pinctrl | GpioClx | 🔲 |
 | A7 | BCM2712 DMA（含 DMA40） | KMDF | 🔲 |
 | A8 | BCM2712 I2C（BSC） | SpbCx | 🔲 |
@@ -56,14 +56,14 @@ code sample → Pi5 實測事實 → 移植狀態**。
 |----|------|------|------|
 | B1 | RP1 韌體 / mailbox | KMDF | 🔲 |
 | B2 | RP1 clocks（PLL） | KMDF | 🔲 |
-| B3 | RP1 GPIO / pinctrl | GpioClx | 🔲 |
-| B4 | RP1 Gigabit Ethernet（Cadence GEM） | NDIS | 🔲 |
+| B3 | [RP1 GPIO / pinctrl](B03-rp1-gpio.md) | GpioClx | ✅ |
+| B4 | [RP1 Gigabit Ethernet（Cadence GEM）](B04-rp1-ethernet-gem.md) | NDIS | ✅ |
 | B5 | RP1 USB3 ×2（DesignWare DWC3） | inbox xHCI | 🔲 |
 | B6 | RP1 DMA（DesignWare AXI-DMA） | KMDF | 🔲 |
 | B7 | RP1 UART ×6（PL011-AXI） | SerCx2 | 🔲 |
-| B8 | RP1 SPI ×8（DesignWare SSI） | SpbCx | 🔲 |
+| B8 | [RP1 SPI ×8（DesignWare SSI）](B08-rp1-designware-spi.md) | SpbCx | ✅ |
 | B9 | [RP1 I2C ×7（DesignWare）](B09-rp1-designware-i2c.md) | SpbCx | ✅（範本章）|
-| B10 | RP1 PWM ×2 | KMDF | 🔲 |
+| B10 | [RP1 PWM ×2](B10-rp1-pwm.md) | KMDF | ✅ |
 | B11 | RP1 SD/MMC（DesignWare MSHC） | SdPort | 🔲 |
 | B12 | RP1 ADC / 溫度 | KMDF | 🔲 |
 | B13 | RP1 PIO（獨有可程式 I/O） | KMDF 自訂 | 🔲 |
