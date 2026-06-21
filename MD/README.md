@@ -6,6 +6,7 @@
 |--------|------|
 | [`Note/`](Note/) | 各階段 **know-how 筆記**（檔名 `年月日-時間-主題.md`）+ 進度/清單核心文件。 |
 | [`Skill/`](Skill/) | **操作型 how-to**（建置工具鏈、Pi5 SSH 硬體萃取…），CLAUDE.md 細節引導至此。 |
+| [`teachbook/`](teachbook/) | **教學書 × Pi5 硬體規格書**：Windows 驅動移植教學（基礎觀念 + 逐一硬體規格與移植，附 code sample）。持續撰寫中。 |
 | [`History/`](History/) | **開發歷程**（已完成/解除的自動移植 loop 紀錄）。 |
 
 ## Skill（操作 how-to）
