@@ -22,6 +22,7 @@
 |------|------|
 | [`Note/RPi5-Porting-Status.md`](Note/RPi5-Porting-Status.md) | **全 Pi5 驅動移植狀態清單**（狀態階梯 ⬜🟡🟢🔵✅➖、雙機交接盤點、各驅動產出路徑/餘下項目）。每完成階段性產出即更新。|
 | [`Note/RPi5-Driver-Porting-Inventory.md`](Note/RPi5-Driver-Porting-Inventory.md) | 硬體**全裝置清單**與 Windows 驅動移植對照表。|
+| [`Note/RPi5-Porting-Difficulty-List.md`](Note/RPi5-Porting-Difficulty-List.md) | **移植難易清單**：好移植 vs 難移植（如 WiFi）分類 + 逐一原因。|
 
 ## 重點 know-how 筆記
 
