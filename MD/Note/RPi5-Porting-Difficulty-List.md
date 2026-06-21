@@ -64,7 +64,7 @@
 | **相機 CSI / ISP（PiSP）** | 整套 **AVStream + 影像流水線**（CSI 收流、debayer、DMA 佇列、sensor I2C、ks.h C++ 坑）。**務實路線**：繞過硬體 PiSP → kernel CFE 收 Bayer RAW + **user-mode DeviceMFT 軟體 debayer**。成敗在 **WoA PCIe DMA/IOMMU**（用 WDF common buffer 的 IOVA）。**~6-9 人月**，5 步里程碑。詳見 [`camera/`](camera/) | AVStream miniport + DeviceMFT | AVStream / MFT |
 | **HEVC 解碼（rpivid）** | Pi5 **只有 HEVC 硬解**（無 H.264/VP9/AV1 → **YouTube 4K 用不到**，只能本地 4K HEVC）。走**獨立 Sync MFT + KMDF**（繞過沒做的 WDDM）；`rpivid` 是 stateless（host 自 parse + 管 DPB）+ 輸出 **SAND** 要 NEON 轉 NV12。**~3.5-4.5 人月**。只惠及電影與電視/WMP（Edge/VLC 走 DXVA 不吃 MFT）。詳見 [`hevc/`](hevc/) | KMDF + user-mode MFT | Media Foundation（MFT）|
 | **Bluetooth（CYW43455 BT）** | **其實比想像簡單（比 WiFi 低一個數量級）**：HCI 是標準協定、inbox **`bthport.sys` 全包上層**；你只寫一個 **Bluetooth Extensible Transport Driver**（H4 byte-stream 搬運 + BCM `.hcd` 韌體載入 + baud 切換）。`bthx.h` **就在標準 WDK**（先前「缺 SDK」不成立）。**~1-1.5 人月**，有明確 5 步 bring-up。詳見 [`bluetooth/`](bluetooth/) | KMDF transport driver（接 inbox bthport）| bthport（BTHX）|
-| **IOMMU** | DMA 位址轉換 + 保護，要接 Windows 的 **DMA remapping** 模型（高難度），且影響所有經它的 DMA 路徑 | DMA remapping 整合 | — |
+| **IOMMU / SMMU** | **其實不寫驅動**：Windows ARM64 內建 SMMUv2 支援。「移植」＝**把 BCM2712 MMU-500(SMMUv2) 寫進 ACPI IORT**（UEFI/EDK2），HAL 自動建 DMA 映射；driver 只用 WDF DMA。難在 debug ACPI + 是**所有 PCIe/RP1 DMA 的先決條件**。詳見 [`iommu/`](iommu/) | ACPI IORT（非 .sys）| HAL 內建 |
 | **DSI / DPI / VEC 顯示輸出** | 同 HDMI，要 WDDM（不同 connector/輸出級）；屬 Tier 3 | WDDM | WDDM |
 
 ### 難移植的共同特徵（一眼判斷）

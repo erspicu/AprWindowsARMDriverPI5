@@ -28,6 +28,7 @@
 | [`Note/gpu/`](Note/gpu/) | **V3D GPU（VideoCore VII）移植專題**：WDDM 架構、DOD 點亮畫面、**重用 Mesa(v3d/v3dv) + DXVK 玩家加速路線**、知識邊界誠實劃分。|
 | [`Note/hevc/`](Note/hevc/) | **HEVC 硬解（rpivid）移植專題**：Pi5 codec 涵蓋真相（HEVC only，非 YouTube）、KMDF + 獨立 MFT 路線、stateless 解碼/SAND、整合現實。|
 | [`Note/camera/`](Note/camera/) | **相機（CSI-2/PiSP）移植專題**：Sensor→RP1 CFE→ISP 鏈、AVStream + DeviceMFT 軟體 ISP 路線、WoA PCIe DMA/IOMMU 關鍵、5 步里程碑。|
+| [`Note/iommu/`](Note/iommu/) | **IOMMU/SMMU 移植專題**：釐清「不寫驅動，是寫 ACPI IORT」、BCM2712 MMU-500、IORT 三 node、所有 PCIe DMA 的先決條件。|
 
 ## 重點 know-how 筆記
 
