@@ -7,7 +7,9 @@
 > 適合：想學 Windows 驅動開發、想了解 Linux→Windows 驅動移植、或想認識 Pi5 硬體的人。
 > 預備知識：會看 C、對作業系統/硬體有基本概念即可；不需先懂驅動。
 
-本書持續撰寫中（✍️ 撰寫中 / ✅ 已完成 / 🔲 規劃中）。
+**全章節初稿完成** ✅（第一部 10 章 + 第二部 ~44 個硬體章）。狀態：✅ 已完成 / ✍️ 撰寫中 / 🔲 規劃中。
+> 有真實移植 code 的章最厚（附 code sample + Pi5 實測 + B 類修正）；概念型章（多媒體/無線/IOMMU 等
+> 尚未動工移植者）以架構與規格為主，待實作後再補 code。
 
 ---
 
@@ -47,8 +49,8 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | A10 | [PL011 UART（除錯）](A10-uart-pl011.md) | SerCx2 / inbox | ✅ |
 | A11 | [RNG（iproc-rng200）](A11-rng.md) | KMDF | ✅ |
 | A12 | [Watchdog / PM](A12-watchdog.md) | KMDF | ✅ |
-| A13 | 溫度 / 系統計時器 | ACPI | 🔲 |
-| A14 | IOMMU | DMA remapping | 🔲 |
+| A13 | 溫度（見 [D3-D7](D03-misc-devices.md)）/ 系統計時器（見 [A4 GTDT](A04-gic-interrupts.md)） | ACPI | ✅ |
+| A14 | [IOMMU](A14-iommu.md) | DMA remapping | ✅ |
 
 ### B. RP1 南橋
 
@@ -68,31 +70,27 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | B12 | [RP1 ADC / 溫度](B12-rp1-adc.md) | KMDF | ✅ |
 | B13 | [RP1 PIO（獨有可程式 I/O）](B13-rp1-pio.md) | KMDF 自訂 | ✅ |
 | B14 | [RP1 I2S ×3（DesignWare）](B14-rp1-i2s.md) | PortCls | ✅ |
-| B15 | RP1 類比音訊輸出 | PortCls | 🔲 |
+| B15 | [RP1 類比音訊輸出](B15-rp1-analog-audio.md) | PortCls | ✅ |
 
 ### C. 多媒體（顯示 / GPU / 相機 / 編解碼）
 
 | 章 | 裝置 | 框架 | 狀態 |
 |----|------|------|------|
-| C1 | HDMI ×2 | WDDM | 🔲 |
-| C2 | HVS / PixelValve（顯示合成） | WDDM | 🔲 |
-| C3 | V3D GPU | WDDM 完整 GPU | 🔲 |
-| C4 | HEVC 解碼器 | Media Foundation / DXVA | 🔲 |
-| C5 | ISP（PiSP Back End） | AVStream / MFT | 🔲 |
-| C6 | MIPI CSI 相機前端 ×2 | AVStream | 🔲 |
-| C7 | MIPI DSI / DPI / VEC 顯示輸出 | WDDM | 🔲 |
+| C1 | [HDMI ×2](C01-hdmi.md) | WDDM | ✅ |
+| C2 | [HVS / PixelValve（顯示合成）](C02-hvs-display.md) | WDDM | ✅ |
+| C3 | [V3D GPU](C03-v3d-gpu.md) | WDDM 完整 GPU | ✅ |
+| C4 | [HEVC 解碼器](C04-hevc-decoder.md) | Media Foundation / DXVA | ✅ |
+| C5 | [ISP（PiSP Back End）](C05-isp-pisp.md) | AVStream / MFT | ✅ |
+| C6 | [MIPI CSI 相機前端 ×2](C06-csi-camera.md) | AVStream | ✅ |
+| C7 | [MIPI DSI / DPI / VEC 顯示輸出](C07-dsi-dpi-vec.md) | WDDM | ✅ |
 
 ### D. 外接 / 板載 / 韌體
 
 | 章 | 裝置 | 框架 | 狀態 |
 |----|------|------|------|
-| D1 | WiFi（CYW43455，SDIO） | NDIS 802.11 | 🔲 |
+| D1 | [WiFi（CYW43455，SDIO）](D01-wifi.md) | NDIS 802.11 | ✅ |
 | D2 | [Bluetooth（BCM43438，UART HCI）](D02-bluetooth.md) | bthport | ✅ |
-| D3 | Ethernet PHY（BCM54213） | 併入 NDIS | 🔲 |
-| D4 | 散熱風扇（PWM-fan）/ 熱區 | KMDF + 熱區 | 🔲 |
-| D5 | 電源鍵 / 狀態 LED | HID / KMDF | 🔲 |
-| D6 | RTC（韌體型） | KMDF / ACPI | 🔲 |
-| D7 | PMIC / regulators | 韌體 / ACPI | 🔲 |
+| D3-D7 | [PHY / 風扇 / 電源鍵 / LED / RTC / PMIC](D03-misc-devices.md) | 各（HID/KMDF/ACPI/韌體） | ✅ |
 
 ---
 
