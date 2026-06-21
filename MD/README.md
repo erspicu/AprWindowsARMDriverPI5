@@ -25,6 +25,7 @@
 | [`Note/RPi5-Porting-Difficulty-List.md`](Note/RPi5-Porting-Difficulty-List.md) | **移植難易清單**：好移植 vs 難移植（如 WiFi）分類 + 逐一原因。|
 | [`Note/wifi/`](Note/wifi/) | **WiFi（CYW43455）移植專題**：WHD + NetAdapterCx 路線、開源資源、可落地實作指南、陷阱。|
 | [`Note/bluetooth/`](Note/bluetooth/) | **藍牙（CYW43455 BT）移植專題**：bthx transport driver 路線、BCM .hcd 韌體、ACPI、bring-up 里程碑。|
+| [`Note/gpu/`](Note/gpu/) | **V3D GPU（VideoCore VII）移植專題**：WDDM 架構、DOD 點亮畫面、**重用 Mesa(v3d/v3dv) + DXVK 玩家加速路線**、知識邊界誠實劃分。|
 
 ## 重點 know-how 筆記
 

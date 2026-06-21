@@ -59,7 +59,7 @@
 | 裝置 | **難在哪（具體原因）** | 缺的關鍵 | 框架 |
 |------|------------------------|----------|------|
 | **WiFi（CYW43455）** | ① 802.11 協定層在 OS（Linux=cfg80211/mac80211 vs Windows=WiFiCx/WDI，架構不同、無源碼可直接移植）② SDIO function driver ③ 韌體 blob 載入 ④ ARM64 無現成驅動。**但有捷徑**：CYW43455 是 FullMAC → 用 **Infineon WHD + 包成 NetAdapterCx 偽裝乙太網卡**，避開整個 WLAN stack，**~2-3 人月（非獨立專案級）**，有明確落地步驟 | WHD library + SDIO function driver（不必碰 WiFiCx）| NetAdapterCx（偽裝 Ethernet）|
-| **V3D GPU** | GPU 驅動是「兩半」：**KMD（WDDM 排程/記憶體）+ UMD（把 D3D/OpenGL/Vulkan 編成 V3D 指令，等同移植 Mesa）**，兩半都巨大；Windows 無對應物 | WDDM KMD + UMD（Mesa 移植） | WDDM |
+| **V3D GPU** | 完整原生 D3D WDDM 極大（KMD+UMD+DXIL→QPU 編譯器＝數十人×年，小團隊不可行）。**但有務實玩家路線**：V3D 是**最開源的 GPU**（Mesa `v3d`/`v3dv` 就是 Broadcom 官方驅動，暫存器/CL/QPU/MMU 100% 公開）→ 精簡 WDDM KMD + 移植 Mesa(GL/Vulkan ICD) + **DXVK/VKD3D**，~1 人年給玩家 3D 加速；先做 DOD+WARP 可用桌面。詳見 [`gpu/`](gpu/) | DOD（桌面）/ KMD+Mesa+DXVK（加速）| WDDM / Vulkan ICD |
 | **HDMI / HVS / 顯示管線** | 要完整 **WDDM**（modeset/present/電源…整套 DDI 合約），與 Linux DRM/KMS 架構不同；HDMI 不能單獨運作，要連 HVS+PixelValve 整條 | 完整 WDDM display miniport | WDDM |
 | **相機 CSI / ISP（PiSP）** | **AVStream（KS filter/pin）+ 影像流水線**（CSI 收流、ISP 去馬賽克/降噪、DMA buffer 佇列、sensor I2C 控制）整套；ks.h 還要 C++ 編譯踩雷 | AVStream capture 完整實作 | AVStream / MFT |
 | **HEVC 解碼** | 要實作 **DXVA / Media Foundation MFT**，與顯示/記憶體 surface 整合 | DXVA/MFT 解碼器 | MF / DXVA |
