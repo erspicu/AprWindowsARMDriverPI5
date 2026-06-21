@@ -36,17 +36,17 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | 章 | 裝置 | 框架 | 狀態 |
 |----|------|------|------|
 | A1 | PCIe Root Complex | inbox pci.sys + ACPI | 🔲 |
-| A2 | VideoCore 韌體介面 / Mailbox | KMDF | 🔲 |
+| A2 | [VideoCore 韌體介面 / Mailbox](A02-mailbox.md) | KMDF | ✅ |
 | A3 | BCM2712 clocks / power | 韌體/ACPI | 🔲 |
 | A4 | GIC-400 / L2 中斷控制器 | ACPI MADT | 🔲 |
 | A5 | [SDHCI（SD/eMMC）](A05-sdhci-sdport.md) | SdPort | ✅ |
 | A6 | BCM2712 GPIO / pinctrl | GpioClx | 🔲 |
-| A7 | BCM2712 DMA（含 DMA40） | KMDF | 🔲 |
+| A7 | [BCM2712 DMA（含 DMA40）](A07-bcm2712-dma40.md) | KMDF | ✅ |
 | A8 | BCM2712 I2C（BSC） | SpbCx | 🔲 |
 | A9 | BCM2712 SPI | SpbCx | 🔲 |
 | A10 | PL011 UART（除錯） | SerCx2 / inbox | 🔲 |
-| A11 | RNG（iproc-rng200） | KMDF | 🔲 |
-| A12 | Watchdog / PM | KMDF | 🔲 |
+| A11 | [RNG（iproc-rng200）](A11-rng.md) | KMDF | ✅ |
+| A12 | [Watchdog / PM](A12-watchdog.md) | KMDF | ✅ |
 | A13 | 溫度 / 系統計時器 | ACPI | 🔲 |
 | A14 | IOMMU | DMA remapping | 🔲 |
 
@@ -55,7 +55,7 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | 章 | 裝置 | 框架 | 狀態 |
 |----|------|------|------|
 | B1 | RP1 韌體 / mailbox | KMDF | 🔲 |
-| B2 | RP1 clocks（PLL） | KMDF | 🔲 |
+| B2 | [RP1 clocks（PLL）](B02-rp1-clocks.md) | KMDF | ✅ |
 | B3 | [RP1 GPIO / pinctrl](B03-rp1-gpio.md) | GpioClx | ✅ |
 | B4 | [RP1 Gigabit Ethernet（Cadence GEM）](B04-rp1-ethernet-gem.md) | NDIS | ✅ |
 | B5 | RP1 USB3 ×2（DesignWare DWC3） | inbox xHCI | 🔲 |
@@ -65,9 +65,9 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | B9 | [RP1 I2C ×7（DesignWare）](B09-rp1-designware-i2c.md) | SpbCx | ✅（範本章）|
 | B10 | [RP1 PWM ×2](B10-rp1-pwm.md) | KMDF | ✅ |
 | B11 | RP1 SD/MMC（DesignWare MSHC） | SdPort | 🔲 |
-| B12 | RP1 ADC / 溫度 | KMDF | 🔲 |
+| B12 | [RP1 ADC / 溫度](B12-rp1-adc.md) | KMDF | ✅ |
 | B13 | RP1 PIO（獨有可程式 I/O） | KMDF 自訂 | 🔲 |
-| B14 | RP1 I2S ×3（DesignWare） | PortCls | 🔲 |
+| B14 | [RP1 I2S ×3（DesignWare）](B14-rp1-i2s.md) | PortCls | ✅ |
 | B15 | RP1 類比音訊輸出 | PortCls | 🔲 |
 
 ### C. 多媒體（顯示 / GPU / 相機 / 編解碼）
