@@ -62,7 +62,7 @@
 | **V3D GPU** | 完整原生 D3D WDDM 極大（KMD+UMD+DXIL→QPU 編譯器＝數十人×年，小團隊不可行）。**但有務實玩家路線**：V3D 是**最開源的 GPU**（Mesa `v3d`/`v3dv` 就是 Broadcom 官方驅動，暫存器/CL/QPU/MMU 100% 公開）→ 精簡 WDDM KMD + 移植 Mesa(GL/Vulkan ICD) + **DXVK/VKD3D**，~1 人年給玩家 3D 加速；先做 DOD+WARP 可用桌面。詳見 [`gpu/`](gpu/) | DOD（桌面）/ KMD+Mesa+DXVK（加速）| WDDM / Vulkan ICD |
 | **HDMI / HVS / 顯示管線** | 要完整 **WDDM**（modeset/present/電源…整套 DDI 合約），與 Linux DRM/KMS 架構不同；HDMI 不能單獨運作，要連 HVS+PixelValve 整條 | 完整 WDDM display miniport | WDDM |
 | **相機 CSI / ISP（PiSP）** | **AVStream（KS filter/pin）+ 影像流水線**（CSI 收流、ISP 去馬賽克/降噪、DMA buffer 佇列、sensor I2C 控制）整套；ks.h 還要 C++ 編譯踩雷 | AVStream capture 完整實作 | AVStream / MFT |
-| **HEVC 解碼** | 要實作 **DXVA / Media Foundation MFT**，與顯示/記憶體 surface 整合 | DXVA/MFT 解碼器 | MF / DXVA |
+| **HEVC 解碼（rpivid）** | Pi5 **只有 HEVC 硬解**（無 H.264/VP9/AV1 → **YouTube 4K 用不到**，只能本地 4K HEVC）。走**獨立 Sync MFT + KMDF**（繞過沒做的 WDDM）；`rpivid` 是 stateless（host 自 parse + 管 DPB）+ 輸出 **SAND** 要 NEON 轉 NV12。**~3.5-4.5 人月**。只惠及電影與電視/WMP（Edge/VLC 走 DXVA 不吃 MFT）。詳見 [`hevc/`](hevc/) | KMDF + user-mode MFT | Media Foundation（MFT）|
 | **Bluetooth（CYW43455 BT）** | **其實比想像簡單（比 WiFi 低一個數量級）**：HCI 是標準協定、inbox **`bthport.sys` 全包上層**；你只寫一個 **Bluetooth Extensible Transport Driver**（H4 byte-stream 搬運 + BCM `.hcd` 韌體載入 + baud 切換）。`bthx.h` **就在標準 WDK**（先前「缺 SDK」不成立）。**~1-1.5 人月**，有明確 5 步 bring-up。詳見 [`bluetooth/`](bluetooth/) | KMDF transport driver（接 inbox bthport）| bthport（BTHX）|
 | **IOMMU** | DMA 位址轉換 + 保護，要接 Windows 的 **DMA remapping** 模型（高難度），且影響所有經它的 DMA 路徑 | DMA remapping 整合 | — |
 | **DSI / DPI / VEC 顯示輸出** | 同 HDMI，要 WDDM（不同 connector/輸出級）；屬 Tier 3 | WDDM | WDDM |
