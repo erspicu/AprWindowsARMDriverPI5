@@ -40,10 +40,10 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | A3 | BCM2712 clocks / power | 韌體/ACPI | 🔲 |
 | A4 | GIC-400 / L2 中斷控制器 | ACPI MADT | 🔲 |
 | A5 | [SDHCI（SD/eMMC）](A05-sdhci-sdport.md) | SdPort | ✅ |
-| A6 | BCM2712 GPIO / pinctrl | GpioClx | 🔲 |
+| A6 | [BCM2712 GPIO / pinctrl](A06-bcm2712-gpio.md) | GpioClx | ✅ |
 | A7 | [BCM2712 DMA（含 DMA40）](A07-bcm2712-dma40.md) | KMDF | ✅ |
-| A8 | BCM2712 I2C（BSC） | SpbCx | 🔲 |
-| A9 | BCM2712 SPI | SpbCx | 🔲 |
+| A8 | [BCM2712 I2C（BSC）](A08-bcm2712-i2c.md) | SpbCx | ✅ |
+| A9 | [BCM2712 SPI](A09-bcm2712-spi.md) | SpbCx | ✅ |
 | A10 | PL011 UART（除錯） | SerCx2 / inbox | 🔲 |
 | A11 | [RNG（iproc-rng200）](A11-rng.md) | KMDF | ✅ |
 | A12 | [Watchdog / PM](A12-watchdog.md) | KMDF | ✅ |
@@ -66,7 +66,7 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | B10 | [RP1 PWM ×2](B10-rp1-pwm.md) | KMDF | ✅ |
 | B11 | RP1 SD/MMC（DesignWare MSHC） | SdPort | 🔲 |
 | B12 | [RP1 ADC / 溫度](B12-rp1-adc.md) | KMDF | ✅ |
-| B13 | RP1 PIO（獨有可程式 I/O） | KMDF 自訂 | 🔲 |
+| B13 | [RP1 PIO（獨有可程式 I/O）](B13-rp1-pio.md) | KMDF 自訂 | ✅ |
 | B14 | [RP1 I2S ×3（DesignWare）](B14-rp1-i2s.md) | PortCls | ✅ |
 | B15 | RP1 類比音訊輸出 | PortCls | 🔲 |
 
@@ -87,7 +87,7 @@ code sample → Pi5 實測事實 → 移植狀態**。
 | 章 | 裝置 | 框架 | 狀態 |
 |----|------|------|------|
 | D1 | WiFi（CYW43455，SDIO） | NDIS 802.11 | 🔲 |
-| D2 | Bluetooth（BCM43438，UART HCI） | bthport | 🔲 |
+| D2 | [Bluetooth（BCM43438，UART HCI）](D02-bluetooth.md) | bthport | ✅ |
 | D3 | Ethernet PHY（BCM54213） | 併入 NDIS | 🔲 |
 | D4 | 散熱風扇（PWM-fan）/ 熱區 | KMDF + 熱區 | 🔲 |
 | D5 | 電源鍵 / 狀態 LED | HID / KMDF | 🔲 |
