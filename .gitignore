@@ -28,9 +28,8 @@
 *.user
 *.suo
 
-# Gemini knowledge-base tool: keep the template, drop the real key + logs
+# Gemini knowledge-base tool: keep the template + query logs (message/), drop the real key
 tools/knowledgebase/config.json
-tools/knowledgebase/message/
 tools/knowledgebase/*.pdb
 
 # OS cruft

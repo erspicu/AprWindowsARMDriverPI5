@@ -63,7 +63,7 @@
 | **HDMI / HVS / 顯示管線** | 要完整 **WDDM**（modeset/present/電源…整套 DDI 合約），與 Linux DRM/KMS 架構不同；HDMI 不能單獨運作，要連 HVS+PixelValve 整條 | 完整 WDDM display miniport | WDDM |
 | **相機 CSI / ISP（PiSP）** | **AVStream（KS filter/pin）+ 影像流水線**（CSI 收流、ISP 去馬賽克/降噪、DMA buffer 佇列、sensor I2C 控制）整套；ks.h 還要 C++ 編譯踩雷 | AVStream capture 完整實作 | AVStream / MFT |
 | **HEVC 解碼** | 要實作 **DXVA / Media Foundation MFT**，與顯示/記憶體 surface 整合 | DXVA/MFT 解碼器 | MF / DXVA |
-| **Bluetooth（BCM43438）** | ① 走 **bthport/BthMini**，需 `bthx.h` 等 **SDK 標頭（環境暫缺）** ② 廠商韌體 patch（.hcd）載入 ③ HCI 協定整合 | bthx SDK + bthport 整合 | bthport |
+| **Bluetooth（CYW43455 BT）** | **其實比想像簡單（比 WiFi 低一個數量級）**：HCI 是標準協定、inbox **`bthport.sys` 全包上層**；你只寫一個 **Bluetooth Extensible Transport Driver**（H4 byte-stream 搬運 + BCM `.hcd` 韌體載入 + baud 切換）。`bthx.h` **就在標準 WDK**（先前「缺 SDK」不成立）。**~1-1.5 人月**，有明確 5 步 bring-up。詳見 [`bluetooth/`](bluetooth/) | KMDF transport driver（接 inbox bthport）| bthport（BTHX）|
 | **IOMMU** | DMA 位址轉換 + 保護，要接 Windows 的 **DMA remapping** 模型（高難度），且影響所有經它的 DMA 路徑 | DMA remapping 整合 | — |
 | **DSI / DPI / VEC 顯示輸出** | 同 HDMI，要 WDDM（不同 connector/輸出級）；屬 Tier 3 | WDDM | WDDM |
 

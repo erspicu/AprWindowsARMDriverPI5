@@ -24,6 +24,7 @@
 | [`Note/RPi5-Driver-Porting-Inventory.md`](Note/RPi5-Driver-Porting-Inventory.md) | 硬體**全裝置清單**與 Windows 驅動移植對照表。|
 | [`Note/RPi5-Porting-Difficulty-List.md`](Note/RPi5-Porting-Difficulty-List.md) | **移植難易清單**：好移植 vs 難移植（如 WiFi）分類 + 逐一原因。|
 | [`Note/wifi/`](Note/wifi/) | **WiFi（CYW43455）移植專題**：WHD + NetAdapterCx 路線、開源資源、可落地實作指南、陷阱。|
+| [`Note/bluetooth/`](Note/bluetooth/) | **藍牙（CYW43455 BT）移植專題**：bthx transport driver 路線、BCM .hcd 韌體、ACPI、bring-up 里程碑。|
 
 ## 重點 know-how 筆記
 
