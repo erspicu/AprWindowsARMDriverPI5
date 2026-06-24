@@ -119,11 +119,64 @@ static void test_h4_rx(void)
     }
 }
 
+static void test_vendor(void)
+{
+    UCHAR p6[6];
+    /* Pi5 DT: max-speed 3,000,000 ; local-bd-address d6 5f 58 9e a2 88 */
+    static const UCHAR mac[6] = { 0x88, 0xA2, 0x9E, 0x58, 0x5F, 0xD6 };
+
+    printf("-- BCM vendor payloads (Pi5 real values) --\n");
+
+    BtBcmBuildBaudRatePayload(3000000, p6);
+    check("baud 3M -> 00 00 c0 c6 2d 00",
+          p6[0]==0x00 && p6[1]==0x00 && p6[2]==0xC0 && p6[3]==0xC6 && p6[4]==0x2D && p6[5]==0x00);
+
+    BtBcmBuildBdAddrPayload(mac, p6);
+    check("BD_ADDR reversed -> d6 5f 58 9e a2 88",
+          p6[0]==0xD6 && p6[1]==0x5F && p6[2]==0x58 && p6[3]==0x9E && p6[4]==0xA2 && p6[5]==0x88);
+
+    /* .hcd record parser: synthetic stream of two records [opcode LE][len][data] */
+    {
+        /* rec1: Write_RAM 0xFC4C len2 {AA BB}; rec2: Launch_RAM 0xFC4E len4 {FF*4} */
+        static const UCHAR hcd[] = {
+            0x4C, 0xFC, 0x02, 0xAA, 0xBB,
+            0x4E, 0xFC, 0x04, 0xFF, 0xFF, 0xFF, 0xFF
+        };
+        UCHAR out[64];
+        ULONG off = 0, consumed = 0, frame, n = 0;
+
+        frame = BtBcmHcdNextCommand(hcd, sizeof(hcd), off, out, sizeof(out), &consumed);
+        check("hcd rec1 framed (01 4c fc 02 aa bb)",
+              frame==6 && out[0]==0x01 && out[1]==0x4C && out[2]==0xFC && out[3]==0x02 &&
+              out[4]==0xAA && out[5]==0xBB);
+        check("hcd rec1 consumed 5", consumed==5);
+        off += consumed; n++;
+
+        frame = BtBcmHcdNextCommand(hcd, sizeof(hcd), off, out, sizeof(out), &consumed);
+        check("hcd rec2 framed (01 4e fc 04 ff..)",
+              frame==8 && out[1]==0x4E && out[2]==0xFC && out[3]==0x04 && out[7]==0xFF);
+        check("hcd rec2 consumed 7", consumed==7);
+        off += consumed; n++;
+
+        frame = BtBcmHcdNextCommand(hcd, sizeof(hcd), off, out, sizeof(out), &consumed);
+        check("hcd end -> 0", frame==0 && consumed==0);
+        check("parsed 2 records, consumed all", n==2 && off==sizeof(hcd));
+
+        /* truncated record (len says 4 but only 1 data byte present) */
+        {
+            static const UCHAR bad[] = { 0x4C, 0xFC, 0x04, 0x11 };
+            frame = BtBcmHcdNextCommand(bad, sizeof(bad), 0, out, sizeof(out), &consumed);
+            check("truncated hcd record -> 0", frame==0);
+        }
+    }
+}
+
 int main(void)
 {
     printf("== BCM43438 BT HCI simulation ==\n");
     test_framing();
     test_h4_rx();
+    test_vendor();
     printf("== %d passed, %d failed ==\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }

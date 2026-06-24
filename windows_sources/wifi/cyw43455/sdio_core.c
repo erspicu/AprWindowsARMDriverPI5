@@ -106,3 +106,23 @@ WhdNvramPreprocess(_In_reads_(InLen) const char *In, _In_ ULONG InLen,
     Out[o++] = 0x00;
     return o;
 }
+
+ULONG
+WhdResourceGetBlock(_In_reads_(Total) const UCHAR *Data, _In_ ULONG Total,
+                    _In_ ULONG BlockNo, _In_ ULONG BlockSize,
+                    _Out_ const UCHAR **OutPtr)
+{
+    ULONG offset, remain;
+
+    *OutPtr = (const UCHAR *)0;
+    if (BlockSize == 0) {
+        return 0;
+    }
+    offset = BlockNo * BlockSize;
+    if (offset >= Total) {
+        return 0;                 /* past the end - WHD stops requesting */
+    }
+    remain = Total - offset;
+    *OutPtr = Data + offset;
+    return (remain < BlockSize) ? remain : BlockSize;
+}

@@ -57,3 +57,13 @@ int Cyw43455ReadChipId(_In_ const SDIO_OPS *Ops, _Out_ USHORT *ChipId);
  */
 ULONG WhdNvramPreprocess(_In_reads_(InLen) const char *In, _In_ ULONG InLen,
                          _Out_writes_(OutCap) PUCHAR Out, _In_ ULONG OutCap);
+
+/*
+ * WHD firmware-resource block feeder (whd_get_resource_block semantics): hand
+ * out block BlockNo of a resource blob. Sets *OutPtr to the block start and
+ * returns its length = min(BlockSize, Total - BlockNo*BlockSize); returns 0
+ * when BlockNo is past the end (WHD stops). No copy - points into Data.
+ */
+ULONG WhdResourceGetBlock(_In_reads_(Total) const UCHAR *Data, _In_ ULONG Total,
+                          _In_ ULONG BlockNo, _In_ ULONG BlockSize,
+                          _Out_ const UCHAR **OutPtr);

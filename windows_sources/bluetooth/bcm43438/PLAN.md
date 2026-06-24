@@ -17,13 +17,13 @@ KMDF **Bluetooth Extensible Transport Driver**（`bthx.h`）夾在 inbox `bthpor
   - 依型別表：`0x01`Cmd(hdr3,len@2,1B) / `0x02`ACL(hdr4,len@2-3,2B LE) / `0x03`SCO(hdr3,len@2,1B) / `0x04`Evt(hdr2,len@1,1B)。
   - 狀態：`WANT_TYPE→WANT_HEADER→WANT_PAYLOAD→完成`；支援分段餵入；含 `H4IsCommandComplete`。
   - 已驗：整包/逐 byte 分段/兩包黏連/ACL 2B 長度跨界/未知 byte resync/command-complete 判讀。
-- ☐ **A2 [x64] BCM vendor init 序列產生器**：把 [`02-implementation-guide`](../../../MD/Note/bluetooth/02-implementation-guide.md) 的確切序列產成可送 byte。
-  - `Update_Baud_Rate(0xFC18)` 6-byte payload = `00 00 + baud LE32`（3M=`00 00 C0 C6 2D 00`）。
-  - `Launch_RAM(0xFC4E)` payload `FF FF FF FF`；`Write_BD_ADDR(0xFC01)` 6-byte 反序 MAC。
-  - **驗收**：sim 比對每步輸出 byte 與預期 hex。
-- ☐ **A3 [x64] .hcd 解析器**：`[opcode2 LE][len1][data]` 逐筆 → 加 H4 `0x01` → 產出 HCI command；推進指標。
-  - **驗收**：sim 餵一段合成 .hcd（含多筆 record），驗證切出正確筆數 + 每筆 framing 正確。
-- ☐ **A4 [x64] init 狀態機**（離線版）：Reset→Download_Minidriver→loop .hcd→Launch_RAM→Reset→Write_BD_ADDR→Update_Baud_Rate 的步序 + 每步「等對應 command-complete」的判斷邏輯（用 A1 解析模擬收 event）。
+- ☑ **A2 [x64] BCM vendor payload 產生器**（`hci.c`）：**sim 過，用 Pi5 實機值驗證。**
+  - `BtBcmBuildBaudRatePayload`：`00 00 + baud LE32`（3M=`00 00 C0 C6 2D 00`，= Pi5 DT max-speed ✓）。
+  - `BtBcmBuildBdAddrPayload`：6-byte 反序 MAC（Pi5 88:a2:9e:58:5f:d6 → `d6 5f 58 9e a2 88` = DT local-bd-address ✓）。
+- ☑ **A3 [x64] .hcd record 解析器**（`BtBcmHcdNextCommand`）：**sim 過，格式經 Pi5 BCM4345C0.hcd 確認。**
+  - `[opcode2 LE][len1][data]` → 加 H4 `0x01` → HCI command；回傳 frame 長度 + consumed；含截斷/結尾判斷。
+  - 真機驗證：首筆 = `4c fc 46 ...`（Write_RAM 0xFC4C, len 0x46）。
+- ☐ **A4 [x64] init 狀態機**（離線版）：用 A2/A3 串成 Reset→Download_Minidriver→loop .hcd→Launch_RAM→Reset→Write_BD_ADDR→Update_Baud_Rate，每步用 A1 的 `H4IsCommandComplete` 判斷「等對應 complete」再進下一步。
   - **驗收**：sim 模擬「送命令→喂回對應 complete event→進下一步」整條走完。
 
 ## Phase B — WDF / 硬體接線（需 WDK 編譯；部分要 Pi5）

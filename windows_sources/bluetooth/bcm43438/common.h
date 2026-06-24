@@ -66,6 +66,22 @@ ULONG BtBcmBuildCommand(_Out_writes_(BufLen) PUCHAR Buf, _In_ ULONG BufLen,
                         _In_ UCHAR ParamLen);
 ULONG BtBcmInitStepCount(void);
 
+/* Update_Baud_Rate (0xFC18) payload: 2 zero bytes + baud as LE32 -> Out6.
+   (verified vs Pi5 DT max-speed = 3,000,000 -> 00 00 c0 c6 2d 00) */
+VOID BtBcmBuildBaudRatePayload(_In_ ULONG Baud, _Out_writes_(6) PUCHAR Out6);
+
+/* Write_BD_ADDR (0xFC01) payload: the 6-byte MAC in reverse byte order.
+   (Pi5 DT local-bd-address is already stored in this reversed wire order) */
+VOID BtBcmBuildBdAddrPayload(_In_reads_(6) const UCHAR *Mac, _Out_writes_(6) PUCHAR Out6);
+
+/* Parse one .hcd record at Offset ([opcode LE16][len u8][data]) and frame it as
+   an H4 command into OutH4. *Consumed = bytes taken from the .hcd (3+len).
+   Returns the H4 frame length, or 0 when no more records / truncated / no room.
+   (Pi5 BCM4345C0.hcd verified: first record opcode 0xFC4C Write_RAM, len 0x46) */
+ULONG BtBcmHcdNextCommand(_In_reads_(HcdLen) const UCHAR *Hcd, _In_ ULONG HcdLen,
+                          _In_ ULONG Offset, _Out_writes_(OutCap) PUCHAR OutH4,
+                          _In_ ULONG OutCap, _Out_ PULONG Consumed);
+
 /* ---- h4_parser.c : H4 UART HCI receive reassembly state machine ---- */
 #define H4_RX_MAX_PAYLOAD  1024u                          /* HCI ACL/event bound */
 #define H4_RX_MAX_PACKET   (1u + 4u + H4_RX_MAX_PAYLOAD)  /* type + max hdr + payload */

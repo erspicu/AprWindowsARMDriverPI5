@@ -11,7 +11,7 @@ Abstract:    Minimal shim so the BT HCI framing logic (hci.c) compiles + runs in
 
 typedef uint16_t       USHORT;
 typedef unsigned char  UCHAR, *PUCHAR;
-typedef uint32_t       ULONG;
+typedef uint32_t       ULONG, *PULONG;
 typedef const char    *PCSTR;
 typedef void          *PVOID;
 #define VOID void

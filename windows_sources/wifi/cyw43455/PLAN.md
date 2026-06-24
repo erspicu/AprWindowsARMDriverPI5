@@ -24,8 +24,12 @@ NetAdapterCx(乙太網) ─ WHD core(C lib) ─ cyhal_sdio_win.c ─ sdbus.sys �
   - ⚠️ SBADDR 確切 bit layout 待對 brcmfmac/實機（Pi5 C3）確認；目前邏輯自洽。
 - ☑ **A2 [x64] NVRAM 預處理器**（`WhdNvramPreprocess`）：**sim 過。**
   - 去 `#`註解/空行、trim CRLF、每行 `\n`→`\0`、結尾補 `\0\0`。已驗：長度/分隔/雙 NUL/溢位防護。
-- ☐ **A3 [x64] WHD resource 區塊餵給器**：`whd_resource_size` / `whd_get_resource_block`（offset=blockno*BLOCK，回 min(BLOCK, 剩餘)）。
-  - **驗收**：sim 模擬 WHD 分塊索取 firmware，驗證每塊指標/長度正確、邊界（最後一塊不足量）對。
+- ☑ **A3 [x64] WHD resource 區塊餵給器**（`WhdResourceGetBlock`）：**sim 過。**
+  - `offset=blockno*BLOCK`，回 `min(BLOCK, 剩餘)`，過尾回 0；指標指進 blob 不複製。
+  - 驗：block0=512、block1=488(餘)、過尾=0、逐塊指標位移對、總和==Total。
+
+> **2026-06-25 Pi5 實機驗證**（見 [`MD/Note/20260625-0030-wifi-bt-pi5-hardware-facts.md`](../../../MD/Note/20260625-0030-wifi-bt-pi5-hardware-facts.md)）：
+> A1 chip-id @0x18000000=**0x15264345**（低16=0x4345）✓；A2 用真 nvram `brcmfmac43455-sdio.txt`(2074B→1743B) ✓。
 - ☐ **A4 [x64] SDPCM/封包標頭邏輯**（若不直接靠 WHD）：H4 無關，這裡是 SDIO packet 的 add/remove front（給 whd_buffer 用）。*(視 WHD 整合程度，可能由 WHD 內建)*
 
 ## Phase B — WHD 整合 + WDF（需 WDK；部分 Pi5）

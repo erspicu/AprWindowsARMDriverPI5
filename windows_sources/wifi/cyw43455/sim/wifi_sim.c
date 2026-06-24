@@ -56,7 +56,7 @@ static int mock_cmd53(PVOID ctx, UCHAR func, ULONG addr, PUCHAR buf, ULONG len, 
     full   = window | (addr & SBSDIO_SB_OFT_ADDR_MASK);
 
     if (full == CYW43455_CHIPCOMMON_BASE) {
-        val = 0x00004345u;   /* ChipCommon: low16 = chip id 0x4345 */
+        val = 0x15264345u;   /* real Pi5 F1 signature: low16 = chip id 0x4345 */
     }
     for (i = 0; i < len && i < 4; i++) {
         buf[i] = (UCHAR)((val >> (8 * i)) & 0xFF);
@@ -78,6 +78,15 @@ static void test_chipid(void)
     rc = Cyw43455ReadChipId(&ops, &id);
     check("ReadChipId returns success", rc == 0);
     check("chip id == 0x4345", id == CYW43455_CHIP_ID);
+    /* full F1 signature matches the value brcmfmac reads on a real Pi5 */
+    {
+        ULONG sig = 0;
+        memset(&bus, 0, sizeof(bus)); ops.Ctx = &bus;
+        rc = SdioBackplaneRead32(&ops, CYW43455_CHIPCOMMON_BASE, &sig);
+        check("full F1 signature == 0x15264345 (real Pi5)", rc == 0 && sig == 0x15264345u);
+        memset(&bus, 0, sizeof(bus)); ops.Ctx = &bus; /* reset for the counters below */
+        rc = Cyw43455ReadChipId(&ops, &id);
+    }
     check("3 window writes issued", bus.cmd52Writes == 3);
     check("1 backplane read issued", bus.cmd53Reads == 1);
     check("window LOW/MID/HIGH = 00/00/18",
@@ -133,11 +142,42 @@ static void test_nvram(void)
     check("overflow returns 0", n == 0);
 }
 
+static void test_resource(void)
+{
+    static UCHAR blob[1000];
+    const UCHAR *p = (const UCHAR *)0;
+    ULONG i, len, off, total;
+
+    printf("-- WHD firmware resource block feeder --\n");
+    for (i = 0; i < sizeof(blob); i++) blob[i] = (UCHAR)(i & 0xFF);
+
+    len = WhdResourceGetBlock(blob, sizeof(blob), 0, 512, &p);
+    check("block0 len 512", len == 512 && p == blob);
+
+    len = WhdResourceGetBlock(blob, sizeof(blob), 1, 512, &p);
+    check("block1 len 488 (remainder)", len == 488 && p == blob + 512);
+
+    len = WhdResourceGetBlock(blob, sizeof(blob), 2, 512, &p);
+    check("block2 past end -> 0", len == 0 && p == (const UCHAR *)0);
+
+    /* walk the whole blob, summing block lengths -> must equal Total */
+    off = 0; total = 0; i = 0;
+    for (;;) {
+        len = WhdResourceGetBlock(blob, sizeof(blob), i, 256, &p);
+        if (len == 0) break;
+        check("block ptr at expected offset", p == blob + off);
+        off += len; total += len; i++;
+        if (i > 100) break;
+    }
+    check("summed blocks == Total (256-byte blocks)", total == sizeof(blob));
+}
+
 int main(void)
 {
     printf("== CYW43455 SDIO control-plane simulation ==\n");
     test_chipid();
     test_nvram();
+    test_resource();
     printf("== %d passed, %d failed ==\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }
