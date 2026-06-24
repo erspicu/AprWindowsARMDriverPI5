@@ -1,6 +1,11 @@
 # Raspberry Pi 5 → Windows on ARM 驅動移植狀態清單
 
-> 更新：2026-06-21　｜　硬體全清單見 `RPi5-Driver-Porting-Inventory.md`
+> 更新：2026-06-25　｜　硬體全清單見 `RPi5-Driver-Porting-Inventory.md`
+>
+> **近況（2026-06-25）**：Pi5 **Linux** 唯讀基準機已可 SSH（萃取硬體真相校正驅動，見 `20260625-0030-...md`）。
+> WiFi/藍牙已從規劃推進到實作：**藍牙 Phase A(sim 35/35)+Phase B WDF glue 全 /kernel 乾淨**；
+> **WiFi 控制平面(sim 25/25)+WHD port layer(cy_rtos/cyhal/sdbus glue)全 /kernel 乾淨**。
+> 仍待 **Pi5 跑 Win11-ARM 開發目標**做功能驗證（載入/bring-up/實機）。
 
 ## ⚠️ 重要前提與交接模型（雙機分工）
 **無實機 + 無 Windows-on-Pi5 韌體（UEFI ECAM/ACPI、RP1 PCIe 列舉）下，硬體驅動無法「功能完整」**（無法載入/驗證）。本專案採**雙機交接**：
@@ -43,13 +48,13 @@
 | ~~SD/MMC（#10）~~ 🔵 | **命令引擎已補完 + x64 模擬 18/18 驗證**（`sdhci_hw.c` + `sim/sdhci_sim.c`） | 卡片時序、DMA 資料路徑（需實機）|
 | ~~Ethernet（#11）~~ 🔵 | **GEM 引擎 x64 模擬 22/22**（descriptor/MAC/MDIO） | NBL→ring 接線、DMA buffer、PHY link 需實機 |
 | ~~音訊 HAL（#1）~~ 🔵 ／ PortCls（#2） | **DW I2S 引擎 x64 模擬 20/20**；#2 DataRangeIntersection 待 | codec、真實 DMA、PortCls 端點 |
-| ~~Bluetooth（#12）~~ 🔵 | **Phase A 全完成**：H4 framing + **H4 RX parser** + **.hcd parser** + vendor payloads + **bring-up 狀態機**；**x64 sim 35/35** + ARM64 /kernel 編譯乾淨；Pi5 實機數據驗證（3M baud/BD_ADDR/.hcd 格式）| Phase B：UART IoTarget I/O、RX pump、bthx IOCTL（`bthx.h` 確認在 WDK shared/）需 Win11 實機 |
+| ~~Bluetooth（#12）~~ 🔵 | **Phase A 邏輯**（H4 framing/RX parser/.hcd parser/vendor payloads/bring-up 狀態機）**x64 sim 35/35**；**Phase B WDF glue（B1-B5）全 ARM64 /kernel 編譯乾淨**：開 UART+GPIO IoTarget、用狀態機跑 bring-up、RX pump、`.hcd` 載入(ZwReadFile)、PnP/D0 接線、INF/ASL 草稿；Pi5 實機數據驗證 | 功能驗證需 Win11 實機；**上層走 inbox BthUart.sys**（`bthx.h` 不在現代 WDK），BthUart 組合方式待實機 |
 
 ### 🟡 需「大工程或缺件」（x64 可寫結構，完整功能仍需實機/額外專案）
 | 項目 | 卡點 |
 |------|------|
 | GPU V3D（#13） | **UMD**（Mesa v3d 移植＝獨立大專案）＋ V3D MMU/CL 提交需實機 |
-| WiFi（🟡→🟢 #6） | **改走 WHD+NetAdapterCx**（不寫 dot11/WDI）。SDIO 控制平面 A1-A3（讀 Chip ID 0x4345 / NVRAM 預處理 / WHD resource feeder）**x64 sim 25/25 + ARM64 /kernel 乾淨 + Pi5 實機數據驗證**。卡：WHD source 整合（B2/B3）＋ 韌體載入需實機 |
+| WiFi（🟡→🟢 #6） | **改走 WHD+NetAdapterCx**（不寫 dot11/WDI）。SDIO 控制平面 A1-A3 **sim 25/25**；**WHD source 已取得**，port layer（`cy_rtos_win`/`cyhal_sdio_win`/**`sdbus_glue`** 接真 sdbus.sys）全 **ARM64 /kernel 乾淨**；Pi5 實機數據驗證。卡：KMDF DriverEntry+NetAdapterCx 組裝 + WHD 整合 + 韌體載入需實機 |
 | 相機（🟡 #7） | capture filter/pin/datarange（可寫結構）＋ ISP/sensor 需實機 |
 | 顯示 modeset、DSI/VEC、HEVC、IOMMU… | vc4 HVS/PixelValve 時序、DXVA 等需實機 |
 
@@ -73,7 +78,7 @@
 | 9 | **RP1 GPIO（GpioClx）** 🔵 | GpioClx (KMDF) | `windows_driver/gpio/rp1gpio.sys` | RIO 讀寫/方向/FUNCSEL + **中斷 enable/mask/query/clear 全接上**（CTRL IRQEN/PCIe INTE/INTS、3-bank 聚合）；**x64 模擬 13/13 驗證** | MSI-X→GIC 實際路由、bus demux 接 #4（需實機）|
 | 10 | **RP1/BCM2712 SD/MMC** 🔵 | SdPort miniport | `windows_driver/storage/rp1sd.sys` | 16 callback + **SDHCI 命令引擎**（reset/clock/power/cmd/resp/int/card-detect）接上；**x64 模擬 18/18 驗證** | DMA 資料路徑、tuning、voltage switch、PIO buffer 需實機 |
 | 11 | **RP1 Ethernet（Cadence GEM）** 🔵 | NDIS 6.30 miniport | `windows_driver/net/rp1gem.sys` | 13 handler + **GEM 引擎**（reset/MAC/NCFGR/ring/TX-RX descriptor/MDIO，編入 .sys）；**x64 模擬 22/22 驗證** | NBL→descriptor 接線、DMA common buffer、PHY、general attributes 需實機/NDIS plumbing |
-| 12 | **Bluetooth（BCM4345C0）** 🔵 | KMDF (UART H4 HCI transport) | `windows_driver/bluetooth/btbcm.sys` | **Phase A 全完成**：H4 framing + H4 RX 重組狀態機 + .hcd record parser + baud/BD_ADDR payload + bring-up 狀態機；**x64 sim 35/35** + ARM64 /kernel 編譯乾淨；Pi5 實機驗證（UART=BCM2712 PL011@7d50c000、max-speed 3M、GPIO29、BCM4345C0.hcd 格式 FC4C）| Phase B（需 Win11 實機）：UART IoTarget I/O、RX pump、bthx IOCTL（`bthx.h` **在標準 WDK shared/**）|
+| 12 | **Bluetooth（BCM4345C0）** 🔵 | KMDF (UART H4 HCI) | `windows_driver/bluetooth/btbcm.sys` | **Phase A**（H4 framing/RX 重組/.hcd parser/baud+BD_ADDR payload/bring-up 狀態機）**sim 35/35**；**Phase B WDF glue B1-B5 全 /kernel 乾淨**（`uart.c`：UART+GPIO IoTarget、`BtBcmBringUp`、RX pump；`driver.c`：PnP/D0Entry/D0Exit；`BtBcmLoadFirmware` ZwReadFile；`btbcm.inf`+`bt.asl` 草稿）；Pi5 驗證（PL011@7d50c000、3M、GPIO29、.hcd FC4C）| 上層走 **inbox BthUart.sys**（`bthx.h` 不在現代 WDK，IOCTL 未公開）；功能驗證(M2 心跳起)需 Win11 實機 |
 | 13 | **GPU V3D（VideoCore VII）render KMD** | WDDM render (DxgkInitialize) | `windows_driver/gpu/rp1v3d.sys` | **38 DDI 全部定義 + link**（DRIVER_INITIALIZATION_DATA、PnP/render/VidPn 全套） | V3D MMU/CL 提交/fence 引擎 + UMD（user-mode D3D）需實機 |
 | 14 | **RP1 PWM** 🔵 | KMDF function | `windows_driver/pwm/rp1pwm.sys` | PWM 引擎（channel config/duty/range/enable，GLOBAL_CTRL 多通道）；**x64 模擬 10/10 驗證** | 時脈週期換算、IOCTL 介面、風扇/熱區整合需實機 |
 | 15 | **BCM2712 RNG（iProc RNG200）** 🔵 | KMDF function | `windows_driver/rng/bcmrng.sys` | RNG 引擎（RBG enable/int clear/FIFO count/read word）；**x64 模擬 6/6 驗證** | CNG 熵池介接需實機 |
@@ -98,7 +103,7 @@
 
 | # | 驅動 | 狀態 | 位置 | 餘下 |
 |---|------|------|------|------|
-| 5 | **WiFi（CYW43455）** 🟢 | **改走 WHD+NetAdapterCx 偽裝乙太網卡**（棄 NDIS/dot11）。SDIO 控制平面 `sdio_core.c`：讀 Chip ID 0x4345（backplane window）+ NVRAM 預處理 + WHD resource feeder，**x64 sim 25/25 + ARM64 /kernel 乾淨 + Pi5 實機數據驗證**（F1 sig 0x15264345、真 nvram 2074→1743B）| WHD source 整合（cy_rtos/cyhal_sdio 移植）+ NetAdapterCx + 韌體載入需實機（見 `windows_sources/wifi/cyw43455/PLAN.md`）|
+| 5 | **WiFi（CYW43455）** 🟢 | **改走 WHD+NetAdapterCx 偽裝乙太網卡**（棄 NDIS/dot11）。`sdio_core.c`：讀 Chip ID 0x4345 + NVRAM 預處理 + resource feeder，**sim 25/25**；**WHD 取得 + port layer 全 /kernel 乾淨**：`whd_port/cy_rtos_win.c`(OSAL)、`cyhal_sdio_win.c`(HAL)、**`sdbus_glue.c`**(SDIO_OPS 接真 sdbus.sys、`SdBusSubmitRequest`)、`cyw43455.inf`；Pi5 驗證（F1 sig 0x15264345、真 nvram 2074→1743B）| KMDF DriverEntry/EvtDeviceAdd + NetAdapterCx 組裝 + WHD 整合 + 韌體載入需實機（見 `wifi/cyw43455/PLAN.md`）|
 | 6 | **相機 CSI（RP1 CFE/PiSP）** | AVStream minidriver 註冊骨架（C++, ks.sys） | `windows_driver/camera/rp1cfe.sys` | capture KSFILTERFACTORY（CSI-2 sensor→ISP→video pin）、DMA/buffer 佇列、sensor I2C 控制 |
 
 ---
@@ -150,8 +155,8 @@
 ### C. 外接／板載晶片
 | 驅動 | Linux 來源 | Windows 框架 | 備註 |
 |------|-----------|--------------|------|
-| WiFi (CYW43455) | `brcmfmac` | **WHD + NetAdapterCx** | 🟢 SDIO 控制平面 sim 25/25 + Pi5 數據驗證；改走 WHD 偽裝乙太網（見 #5 + `wifi/cyw43455/PLAN.md`）|
-| ~~Bluetooth (4345C0)~~ | `hci_bcm.c` | bthport (BTHX transport) | 🔵 見 #12（`btbcm.sys`）；Phase A 全完成 sim 35/35 + Pi5 驗證；bthx.h 在標準 WDK |
+| WiFi (CYW43455) | `brcmfmac` | **WHD + NetAdapterCx** | 🟢 sim 25/25；WHD port + sdbus glue /kernel 乾淨；改走 WHD 偽裝乙太網（見 #5 + `wifi/cyw43455/PLAN.md`）|
+| ~~Bluetooth (4345C0)~~ | `hci_bcm.c` | **inbox BthUart.sys** | 🔵 見 #12；Phase A sim 35/35 + Phase B WDF glue /kernel 乾淨 + Pi5 驗證；`bthx.h` 不在現代 WDK→走 BthUart |
 | Ethernet PHY | `net/phy/broadcom.c` | 併入 NDIS | |
 | 風扇 (PWM) | `pwm-fan.c` | KMDF+熱區 | |
 | 電源鍵 | `gpio_keys.c` | HID 按鈕 | 消費者型（GPIO pin→HID/ACPI button），非 register-HAL |
