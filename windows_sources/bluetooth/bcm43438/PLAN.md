@@ -23,8 +23,11 @@ KMDF **Bluetooth Extensible Transport Driver**（`bthx.h`）夾在 inbox `bthpor
 - ☑ **A3 [x64] .hcd record 解析器**（`BtBcmHcdNextCommand`）：**sim 過，格式經 Pi5 BCM4345C0.hcd 確認。**
   - `[opcode2 LE][len1][data]` → 加 H4 `0x01` → HCI command；回傳 frame 長度 + consumed；含截斷/結尾判斷。
   - 真機驗證：首筆 = `4c fc 46 ...`（Write_RAM 0xFC4C, len 0x46）。
-- ☐ **A4 [x64] init 狀態機**（離線版）：用 A2/A3 串成 Reset→Download_Minidriver→loop .hcd→Launch_RAM→Reset→Write_BD_ADDR→Update_Baud_Rate，每步用 A1 的 `H4IsCommandComplete` 判斷「等對應 complete」再進下一步。
-  - **驗收**：sim 模擬「送命令→喂回對應 complete event→進下一步」整條走完。
+- ☑ **A4 [x64] init 狀態機**（`init_sm.c`：`BtBcmInitStart`/`BtBcmInitOnEvent`）：**sim 過。**
+  - 串成 Reset→Download→loop .hcd(Write_RAM)→Launch_RAM→Reset→Write_BD_ADDR→Update_Baud_Rate，每步用 `H4IsCommandComplete` 判斷再進下一步；transport 用 `BTI_TX_FN` 注入（可測）。
+  - 驗：mock chip 回 complete → 走完 8 步且 opcode 順序符合 bcm_setup；status≠0 → Error。
+
+> **Phase A 全完成（A0-A4）→ BT 達 🔵（狀態機全移植 + x64 sim 35/35 過）。** 下一步進 Phase B（WDF 接 UART/bthx，需 WDK 編譯）。
 
 ## Phase B — WDF / 硬體接線（需 WDK 編譯；部分要 Pi5）
 

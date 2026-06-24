@@ -82,6 +82,37 @@ ULONG BtBcmHcdNextCommand(_In_reads_(HcdLen) const UCHAR *Hcd, _In_ ULONG HcdLen
                           _In_ ULONG Offset, _Out_writes_(OutCap) PUCHAR OutH4,
                           _In_ ULONG OutCap, _Out_ PULONG Consumed);
 
+/* ---- init_sm.c : BCM bring-up state machine (event-driven, HW-independent) ----
+   Drives Reset -> Download_Minidriver -> (.hcd Write_RAM records) -> Launch_RAM
+   -> Reset -> Write_BD_ADDR -> Update_Baud_Rate, advancing one step per matching
+   HCI Command Complete. Transport is injected via BTI_TX_FN so it is x64-sim
+   testable; the driver wires Tx to the UART and feeds events from the RX pump. */
+typedef int (*BTI_TX_FN)(PVOID Ctx, const UCHAR *Data, ULONG Len);
+
+typedef enum _BTI_STEP {
+    BTI_RESET1 = 0, BTI_DOWNLOAD, BTI_HCD, BTI_LAUNCH,
+    BTI_RESET2, BTI_SETBDADDR, BTI_SETBAUD, BTI_DONE
+} BTI_STEP;
+
+typedef struct _BTI {
+    BTI_STEP     Step;
+    ULONG        Baud;
+    UCHAR        BdAddr[6];
+    const UCHAR *Hcd;
+    ULONG        HcdLen;
+    ULONG        HcdOff;
+    USHORT       Pending;     /* opcode we await a Command Complete for */
+    BTI_TX_FN    Tx;
+    PVOID        TxCtx;
+    int          Done;
+    int          Error;
+} BTI, *PBTI;
+
+VOID BtBcmInitStart(_Out_ PBTI S, _In_ ULONG Baud, _In_reads_(6) const UCHAR *Mac,
+                    _In_reads_(HcdLen) const UCHAR *Hcd, _In_ ULONG HcdLen,
+                    _In_ BTI_TX_FN Tx, _In_opt_ PVOID TxCtx);
+VOID BtBcmInitOnEvent(_Inout_ PBTI S, _In_reads_(Len) const UCHAR *Pkt, _In_ ULONG Len);
+
 /* ---- h4_parser.c : H4 UART HCI receive reassembly state machine ---- */
 #define H4_RX_MAX_PAYLOAD  1024u                          /* HCI ACL/event bound */
 #define H4_RX_MAX_PACKET   (1u + 4u + H4_RX_MAX_PAYLOAD)  /* type + max hdr + payload */

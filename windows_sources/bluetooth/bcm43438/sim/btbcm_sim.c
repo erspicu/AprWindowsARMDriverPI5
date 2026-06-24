@@ -171,12 +171,61 @@ static void test_vendor(void)
     }
 }
 
+/* mock UART Tx: record the opcode of each command the state machine sends */
+static USHORT g_txlog[64];
+static int    g_txn;
+static int mock_tx(PVOID ctx, const UCHAR *d, ULONG n)
+{
+    (void)ctx; (void)n;
+    if (g_txn < 64) g_txlog[g_txn++] = (USHORT)d[1] | ((USHORT)d[2] << 8);
+    return 0;
+}
+
+static void test_init(void)
+{
+    /* synthetic .hcd: two Write_RAM (0xFC4C) records */
+    static const UCHAR hcd[] = { 0x4C,0xFC,0x02,0xAA,0xBB,  0x4C,0xFC,0x02,0xCC,0xDD };
+    static const UCHAR mac[6] = { 0x88,0xA2,0x9E,0x58,0x5F,0xD6 };
+    static const USHORT exp[] = { 0x0C03,0xFC2E,0xFC4C,0xFC4C,0xFC4E,0x0C03,0xFC01,0xFC18 };
+    BTI s;
+    int guard = 0, ok = 1, i;
+
+    printf("-- BCM bring-up init state machine --\n");
+
+    g_txn = 0;
+    BtBcmInitStart(&s, 3000000, mac, hcd, sizeof(hcd), mock_tx, (PVOID)0);
+    /* mock chip answers each pending opcode with a success Command Complete */
+    while (!s.Done && !s.Error && guard++ < 1000) {
+        UCHAR ev[7];
+        ev[0]=0x04; ev[1]=0x0E; ev[2]=0x04; ev[3]=0x01;
+        ev[4]=(UCHAR)(s.Pending & 0xFF); ev[5]=(UCHAR)((s.Pending>>8)&0xFF); ev[6]=0x00;
+        BtBcmInitOnEvent(&s, ev, 7);
+    }
+    check("init reached DONE (no error)", s.Done && !s.Error);
+    check("8 commands sent", g_txn == 8);
+    for (i = 0; i < 8 && i < g_txn; i++) { if (g_txlog[i] != exp[i]) ok = 0; }
+    check("opcode order = Reset,Download,2xWriteRAM,Launch,Reset,SetBDADDR,SetBaud",
+          ok && g_txn == 8);
+
+    /* a non-zero Command Complete status must fault the machine */
+    {
+        BTI s2; UCHAR ev[7];
+        g_txn = 0;
+        BtBcmInitStart(&s2, 3000000, mac, hcd, sizeof(hcd), mock_tx, (PVOID)0);
+        ev[0]=0x04; ev[1]=0x0E; ev[2]=0x04; ev[3]=0x01;
+        ev[4]=(UCHAR)(s2.Pending & 0xFF); ev[5]=(UCHAR)((s2.Pending>>8)&0xFF); ev[6]=0x01;
+        BtBcmInitOnEvent(&s2, ev, 7);
+        check("non-zero status -> Error (no DONE)", s2.Error && !s2.Done);
+    }
+}
+
 int main(void)
 {
     printf("== BCM43438 BT HCI simulation ==\n");
     test_framing();
     test_h4_rx();
     test_vendor();
+    test_init();
     printf("== %d passed, %d failed ==\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }
