@@ -4,7 +4,9 @@ Abstract:    BCM43438 Bluetooth UART (H4 HCI) transport - KMDF skeleton.
              Ports the reusable H4 HCI framing + BCM43438 bring-up sequence from
              Linux hci_bcm.c / hci_h4.c. The underlying UART is the RP1/PL011 the
              BT chip is wired to. Full integration with the Windows Bluetooth
-             stack needs the bthx HCI-transport interface (bthx.h, not in this WDK).
+             stack uses the bthx HCI-transport interface (bthx.h IS in the
+             standard WDK under shared/; see MD/Note/bluetooth/). bthport.sys
+             handles L2CAP/SDP/profiles; this driver is the H4 transport.
 --*/
 #pragma once
 
@@ -63,3 +65,35 @@ ULONG BtBcmBuildCommand(_Out_writes_(BufLen) PUCHAR Buf, _In_ ULONG BufLen,
                         _In_ USHORT Opcode, _In_reads_opt_(ParamLen) PUCHAR Params,
                         _In_ UCHAR ParamLen);
 ULONG BtBcmInitStepCount(void);
+
+/* ---- h4_parser.c : H4 UART HCI receive reassembly state machine ---- */
+#define H4_RX_MAX_PAYLOAD  1024u                          /* HCI ACL/event bound */
+#define H4_RX_MAX_PACKET   (1u + 4u + H4_RX_MAX_PAYLOAD)  /* type + max hdr + payload */
+
+typedef enum _H4_RX_STATE {
+    H4_WANT_TYPE = 0,
+    H4_WANT_HEADER,
+    H4_WANT_PAYLOAD
+} H4_RX_STATE;
+
+/* called once per fully reassembled packet: [type][header...][payload...] */
+typedef VOID (*H4_RX_PACKET_CB)(PVOID Context, const UCHAR *Packet, ULONG Length);
+
+typedef struct _H4_RX {
+    H4_RX_STATE     State;
+    UCHAR           Type;
+    UCHAR           Hdr[4];
+    ULONG           HdrNeed;
+    ULONG           HdrGot;
+    ULONG           PayloadNeed;
+    ULONG           PayloadGot;
+    UCHAR           Packet[H4_RX_MAX_PACKET];
+    ULONG           PacketLen;
+    H4_RX_PACKET_CB OnPacket;
+    PVOID           OnPacketCtx;
+} H4_RX, *PH4_RX;
+
+VOID  H4RxInit(_Out_ PH4_RX Rx, _In_ H4_RX_PACKET_CB OnPacket, _In_opt_ PVOID CbContext);
+ULONG H4RxFeed(_Inout_ PH4_RX Rx, _In_reads_(Len) const UCHAR *Data, _In_ ULONG Len);
+ULONG H4IsCommandComplete(_In_reads_(Len) const UCHAR *Pkt, _In_ ULONG Len,
+                          _In_ USHORT Opcode, _Out_opt_ PUCHAR Status);
