@@ -34,9 +34,9 @@ NetAdapterCx(乙太網) ─ WHD core(C lib) ─ cyhal_sdio_win.c ─ sdbus.sys �
 
 ## Phase B — WHD 整合 + WDF（需 WDK；部分 Pi5）
 
-- ☐ **B1 取得 WHD source**：`Infineon/wifi-host-driver`（對 CYW43455 的 tag）；對照 Zephyr port（`cyabs_rtos_zephyr.c`/`cyhal_sdio.c`）。
-- ☐ **B2 [x64-build] `cy_rtos_win.c`**：thread→`PsCreateSystemThread`、semaphore→`KeSemaphore`、mutex/timer/delay/malloc→kernel API（PASSIVE_LEVEL）。
-- ☐ **B3 [x64-build] `cyhal_sdio_win.c`**：WHD SDIO HAL → `SDBUS_REQUEST_PACKET` + `SubmitRequest`（PASSIVE 同步）；接 A1 的 CMD52/53。
+- ☑ **B1 取得 WHD source**：cloned `Infineon/wifi-host-driver` → `sources/wifi-host-driver/`（gitignored）。介面確認：`whd_init(drv,cfg,buffer_ops,network_ops,resource_ops)` + `whd_bus_sdio_attach` + `whd_wifi_on`；底層 = `cyhal_sdio_*`(HAL) + `cy_rtos_*`(OSAL)。整合地圖見 [`whd_port/README.md`](whd_port/README.md)。
+- ☑ **B2 [x64-build] `cy_rtos_win.c`**（`whd_port/`）：實作 WHD 用的 `cy_rtos_*` 子集（semaphore/mutex/thread/timer/delay/time）→ `KeSemaphore`/`KeMutex`/`PsCreateSystemThread`/`KeSetTimerEx`+DPC/`KeDelayExecutionThread`/`KeQueryInterruptTime`。**ARM64 /kernel 編譯乾淨**（PASSIVE_LEVEL；功能待實機）。
+- ☑ **B3 [x64-build] `cyhal_sdio_win.c`**（`whd_port/`）：`cyhal_sdio_send_cmd`(CMD52)/`bulk_transfer`(CMD53) 解碼 SD argument → 轉接 `sdio_core.c` 的 `SDIO_OPS`。**ARM64 /kernel 乾淨**。**剩 sdbus glue**（SDIO_OPS 接 `SubmitRequest` + in-band IRQ）= Win11 實機那塊。
 - ☐ **B4 build 整合**：WHD `.c` 直接編進 .sys（非 user-mode lib）；CRT stub（`snprintf`→`RtlStringCbVPrintfA`）；macro（`WHD_BUS_SDIO`/`CYW43455`/`WHD_CUSTOM_HAL`）；`__attribute__((packed))`→`#pragma pack`。
 - ☐ **B5 [x64-build] SDIO function driver（KMDF）**：INF match `SD\VID_02D0&PID_xxxx`、取 `GUID_SDBUS_INTERFACE_STANDARD`。
 - ☐ **B6 [x64-build] NetAdapterCx**：`NetDeviceInitConfig`→`NetAdapterCreate`→capabilities（MAC 用 `whd_wifi_get_mac_address`、TX/RX caps）→Tx/Rx queue（`EvtPacketQueueAdvance`，memcpy 與 WHD ring buffer 同步）。
