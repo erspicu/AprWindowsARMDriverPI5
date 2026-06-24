@@ -48,16 +48,9 @@ typedef struct _HCI_EVENT_HDR {
 #pragma pack(pop)
 
 #ifndef BTBCM_SIM
-typedef struct _BTBCM_CONTEXT {
-    WDFDEVICE   Device;
-    WDFIOTARGET UartTarget;   /* the PL011 UART carrying H4 HCI */
-    ULONG       InitBaud;     /* 115200 at reset */
-    ULONG       OperBaud;     /* 3 Mbps operational */
-} BTBCM_CONTEXT, *PBTBCM_CONTEXT;
-
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(BTBCM_CONTEXT, BtBcmGetContext)
-
 EVT_WDF_DRIVER_DEVICE_ADD BtBcmEvtDeviceAdd;
+/* BTBCM_CONTEXT is defined at the end of this header (it embeds H4_RX / BTI,
+   which are declared further down). */
 #endif
 
 /* hci.c */
@@ -144,3 +137,33 @@ VOID  H4RxInit(_Out_ PH4_RX Rx, _In_ H4_RX_PACKET_CB OnPacket, _In_opt_ PVOID Cb
 ULONG H4RxFeed(_Inout_ PH4_RX Rx, _In_reads_(Len) const UCHAR *Data, _In_ ULONG Len);
 ULONG H4IsCommandComplete(_In_reads_(Len) const UCHAR *Pkt, _In_ ULONG Len,
                           _In_ USHORT Opcode, _Out_opt_ PUCHAR Status);
+
+#ifndef BTBCM_SIM
+/* ---- device context (embeds the H4 RX machine + the bring-up state machine) ---- */
+typedef struct _BTBCM_CONTEXT {
+    WDFDEVICE     Device;
+    WDFIOTARGET   UartTarget;     /* the BCM2712 PL011 carrying H4 HCI */
+    WDFIOTARGET   GpioTarget;     /* BT_REG_ON (shutdown-gpios; Pi5 = GPIO29) */
+    LARGE_INTEGER UartConnId;     /* RESOURCE_HUB connection id (from _CRS) */
+    LARGE_INTEGER GpioConnId;
+    BOOLEAN       HasGpio;
+    ULONG         InitBaud;       /* 115200 at reset */
+    ULONG         OperBaud;       /* 3 Mbps operational (Pi5 DT max-speed) */
+    UCHAR         BdAddr[6];      /* MAC (from ACPI/DT local-bd-address) */
+    H4_RX         Rx;             /* RX reassembly during bring-up + run */
+    BTI           Bti;            /* bring-up state machine */
+} BTBCM_CONTEXT, *PBTBCM_CONTEXT;
+
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(BTBCM_CONTEXT, BtBcmGetContext)
+
+/* uart.c — B1/B2/B3 WDF glue (resource parse, UART/GPIO IoTarget, sync bring-up) */
+NTSTATUS BtBcmParseResources(_Inout_ PBTBCM_CONTEXT Ctx, _In_ WDFCMRESLIST ResTranslated);
+NTSTATUS BtBcmOpenTargets(_Inout_ PBTBCM_CONTEXT Ctx);
+NTSTATUS BtBcmGpioWrite(_In_ PBTBCM_CONTEXT Ctx, _In_ BOOLEAN High);
+NTSTATUS BtBcmUartSetBaud(_In_ PBTBCM_CONTEXT Ctx, _In_ ULONG Baud);
+NTSTATUS BtBcmUartPurge(_In_ PBTBCM_CONTEXT Ctx);
+NTSTATUS BtBcmUartWriteSync(_In_ PBTBCM_CONTEXT Ctx, _In_reads_(Len) PUCHAR Buf, _In_ ULONG Len);
+NTSTATUS BtBcmUartReadSync(_In_ PBTBCM_CONTEXT Ctx, _Out_writes_(Len) PUCHAR Buf, _In_ ULONG Len,
+                           _In_ ULONG TimeoutMs, _Out_ PULONG BytesRead);
+NTSTATUS BtBcmBringUp(_Inout_ PBTBCM_CONTEXT Ctx, _In_reads_(HcdLen) const UCHAR *Hcd, _In_ ULONG HcdLen);
+#endif

@@ -41,3 +41,11 @@
 - ✅ WiFi A1（chip-id 0x4345）、A2（nvram 預處理）— **實機數據驗證通過**。
 - ✅ BT：max-speed 3M、BD_ADDR 反序、.hcd 格式 — 確認，餵進 A2/A3 實作。
 - 待：BT ACPI 用 `brcm,bcm7271-uart`@7d50c000 + GPIO29；WiFi SBADDR 細節對 brcmfmac。
+
+## BT 上層整合策略更新（問 Gemini + 查 WDK，2026-06-25）
+- **`bthx.h` 不在現代公開 WDK**（10.0.26100/22621/19041 的 km、shared 都沒有）。它是 **Win8 時代 IHV/BSP 專屬**，Win10 後從一般 WDK 移除。struct 欄位 MS Learn 有文件，但 **`IOCTL_BTHX_*` 的 hex code 未公開**（Gemini 拒絕亂猜，建議反組譯 `bthport.sys` 取值）。
+- **✅ 更好的路：inbox `BthUart.sys`**（Windows 10/11 內建的原生序列 H4 HCI transport）。標準 H4 UART 藍牙**不必寫 BTHX driver**：
+  - ACPI 把 BT 掛在 UART 下（`brcm,bcm43438-bt` 已是 Linux compatible；Windows 端給 `_HID` + UartSerialBusV2）。
+  - INF：`Class=Bluetooth` + `Include=bth.inf` / `Needs=BthUart.NT(.Services)` → inbox stack 接管 bthport。
+  - **只剩非標準的 BCM `.hcd` Patch RAM 韌體載入 + baud 切換**要我們做（= 已完成的 Phase A 邏輯 + `uart.c` bring-up），當 vendor 行為 / 薄 filter。
+- WDK 其他相關 header 確認：`reshub.h`✅（`RESOURCE_HUB_CREATE_PATH_FROM_ID` 需 `#define RESHUB_USE_HELPER_ROUTINES` + `NTDDI_VERSION>=WIN8`）、`gpio.h`✅(shared)、`ntddser.h`✅。

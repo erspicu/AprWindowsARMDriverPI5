@@ -29,13 +29,20 @@ KMDF **Bluetooth Extensible Transport Driver**（`bthx.h`）夾在 inbox `bthpor
 
 > **Phase A 全完成（A0-A4）→ BT 達 🔵（狀態機全移植 + x64 sim 35/35 過）。** 下一步進 Phase B（WDF 接 UART/bthx，需 WDK 編譯）。
 
+## ★ 上層整合策略更新（2026-06-25，問 Gemini + 查 WDK）
+> **`bthx.h` 不在現代公開 WDK**（Win8 IHV 專屬，Win10 後移除；`IOCTL_BTHX_*` hex 未公開，要反組譯 `bthport.sys`）。
+> **更好的路：Windows 內建 `BthUart.sys`**（原生序列 H4 HCI transport）。標準 H4 UART BT **不必寫 BTHX**——
+> 用 **ACPI 把 BT 掛在 UART 下 + INF（`Include=bth.inf`/`Needs=BthUart.NT`）**，inbox stack 接管 bthport。
+> 我們只需處理**非標準的 BCM `.hcd` Patch RAM 韌體載入 + baud 切換**（＝已完成的 Phase A 邏輯 + uart.c bring-up），
+> 當成 **BthUart 的 vendor 行為 / 一個薄 filter**。→ B4 從「自寫 BTHX」改為「BthUart INF + BCM 韌體 filter」。
+
 ## Phase B — WDF / 硬體接線（需 WDK 編譯；部分要 Pi5）
 
-- ☐ **B1 [x64-build] 取資源 + 開 UART IoTarget**：`EvtDevicePrepareHardware` 解析 `CmResourceTypeConnection(SERIAL)` → `RESOURCE_HUB_CREATE_PATH_FROM_ID` → `WdfIoTargetOpen`；GPIO(BT_REG_ON) 拉高。*(能編譯，邏輯靠 Pi5 驗)*
-- ☐ **B2 [x64-build] init 期同步收發**：`WdfIoTargetSendWriteSynchronously` + 同步 read 解析（接 A1 parser），timeout 2s。
-- ☐ **B3 [x64-build] 常駐 RX read pump**：async `WdfIoTargetFormatRequestForRead`+completion 串接，餵 A1 parser。
-- ☐ **B4 [x64-build] bthx IOCTL 層**：default queue 收 `IOCTL_BTHX_QUERY_CAPABILITIES`/`SET_VERSION`/`WRITE_HCI`；manual queue 存 pended `READ_HCI`，RX 完成時 complete（+ ring buffer 防掉包）。
-- ☐ **B5 [x64-build] INF**：`Class=Bluetooth`+ClassGuid、`BthxTransport=1`/`BthxProtocol=1`、`Needs=BthUsb.NT*`（**確切 Needs 需查 WDK 驗證**）。
+- ☑ **B1 [x64-build] 取資源 + 開 UART/GPIO IoTarget**（`uart.c` `BtBcmParseResources`/`BtBcmOpenTargets`，接 `driver.c` `EvtDevicePrepareHardware`）：解析 `CmResourceTypeConnection`(SERIAL/GPIO) → `RESOURCE_HUB_CREATE_PATH_FROM_ID`（需 `#define RESHUB_USE_HELPER_ROUTINES`）→ `WdfIoTargetOpen`。**ARM64 /kernel 編譯乾淨。**
+- ☑ **B2 [x64-build] init 期同步收發 + bring-up**（`uart.c` `BtBcmBringUp`）：拉高 BT_REG_ON、UART 115200、用 init_sm（A4）跑 bring-up（`WdfIoTargetSendWriteSynchronously` Tx + `...ReadSynchronously` 餵 A1 parser → 推進狀態機）、完成後 host 切 3M baud + purge。**ARM64 /kernel 乾淨。**（功能待 Win11 實機）
+- ☐ **B3 [x64-build] 常駐 RX read pump**（運行期）：async `WdfIoTargetFormatRequestForRead`+completion 串接，餵 A1 parser → 交給上層。
+- ☐ **B4 [改] 上層整合走 BthUart**：寫 INF `Class=Bluetooth`+ClassGuid + `Include=bth.inf`/`Needs=BthUart.NT(.Services)`；BCM `.hcd` 載入（`ZwReadFile`）+ bring-up 當 vendor/filter 行為。（不再自寫 BTHX IOCTL；若 BthUart 不支援 BCM patchram 才退回自訂 filter）
+- ☐ **B5 .hcd 載入**：`ZwReadFile` 讀 `\SystemRoot\System32\drivers\BCM4345C0.hcd` → 餵 `BtBcmBringUp`。
 
 ## Phase C — 實機（Pi5）
 
