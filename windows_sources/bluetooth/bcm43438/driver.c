@@ -6,11 +6,65 @@ Abstract:    KMDF DriverEntry + AddDevice for the BCM43438 BT UART HCI transport
 
 DRIVER_INITIALIZE DriverEntry;
 EVT_WDF_DEVICE_PREPARE_HARDWARE BtBcmEvtPrepareHardware;
+EVT_WDF_DEVICE_RELEASE_HARDWARE BtBcmEvtReleaseHardware;
+EVT_WDF_DEVICE_D0_ENTRY         BtBcmEvtD0Entry;
+EVT_WDF_DEVICE_D0_EXIT          BtBcmEvtD0Exit;
+
+#define BTBCM_HCD_PATH  L"\\SystemRoot\\System32\\drivers\\BCM4345C0.hcd"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry)
 #pragma alloc_text(PAGE, BtBcmEvtPrepareHardware)
+#pragma alloc_text(PAGE, BtBcmEvtReleaseHardware)
 #endif
+
+/*
+ * D0Entry (PASSIVE_LEVEL): load the BCM .hcd, run the bring-up state machine over
+ * the UART, then start the operational RX pump. From S4/cold this reloads the
+ * firmware; from a warm resume the chip may still hold it (a refinement TODO).
+ */
+NTSTATUS
+BtBcmEvtD0Entry(_In_ WDFDEVICE Device, _In_ WDF_POWER_DEVICE_STATE PreviousState)
+{
+    PBTBCM_CONTEXT ctx = BtBcmGetContext(Device);
+    NTSTATUS status;
+
+    UNREFERENCED_PARAMETER(PreviousState);
+
+    if (ctx->Hcd == NULL) {
+        status = BtBcmLoadFirmware(ctx, BTBCM_HCD_PATH);
+        if (!NT_SUCCESS(status)) {
+            return status;          /* no firmware -> cannot bring the chip up */
+        }
+    }
+    status = BtBcmBringUp(ctx, ctx->Hcd, ctx->HcdLen);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    return BtBcmStartRxPump(ctx);
+}
+
+NTSTATUS
+BtBcmEvtD0Exit(_In_ WDFDEVICE Device, _In_ WDF_POWER_DEVICE_STATE TargetState)
+{
+    PBTBCM_CONTEXT ctx = BtBcmGetContext(Device);
+    UNREFERENCED_PARAMETER(TargetState);
+    ctx->Running = FALSE;                       /* stop the RX pump re-arming */
+    if (ctx->HasGpio) {
+        (void)BtBcmGpioWrite(ctx, FALSE);       /* drop BT_REG_ON (cold-exit) */
+    }
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+BtBcmEvtReleaseHardware(_In_ WDFDEVICE Device, _In_ WDFCMRESLIST ResourcesTranslated)
+{
+    PBTBCM_CONTEXT ctx = BtBcmGetContext(Device);
+    PAGED_CODE();
+    UNREFERENCED_PARAMETER(ResourcesTranslated);
+    BtBcmFreeFirmware(ctx);
+    return STATUS_SUCCESS;
+}
 
 /*
  * EvtDevicePrepareHardware (B1): parse the ACPI _CRS (UARTSerialBusV2 + GpioIo)
@@ -48,6 +102,9 @@ BtBcmEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 
     WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&pnp);
     pnp.EvtDevicePrepareHardware = BtBcmEvtPrepareHardware;
+    pnp.EvtDeviceReleaseHardware = BtBcmEvtReleaseHardware;
+    pnp.EvtDeviceD0Entry         = BtBcmEvtD0Entry;
+    pnp.EvtDeviceD0Exit          = BtBcmEvtD0Exit;
     WdfDeviceInitSetPnpPowerEventCallbacks(DeviceInit, &pnp);
 
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, BTBCM_CONTEXT);

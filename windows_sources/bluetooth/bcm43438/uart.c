@@ -226,3 +226,132 @@ BtBcmBringUp(_Inout_ PBTBCM_CONTEXT Ctx, _In_reads_(HcdLen) const UCHAR *Hcd, _I
     KeDelayExecutionThread(KernelMode, FALSE, &delay);
     return status;
 }
+
+/* ---- B5: load the BCM .hcd firmware blob (PASSIVE_LEVEL) ---- */
+NTSTATUS
+BtBcmLoadFirmware(_Inout_ PBTBCM_CONTEXT Ctx, _In_ PCWSTR Path)
+{
+    UNICODE_STRING            name;
+    OBJECT_ATTRIBUTES         oa;
+    IO_STATUS_BLOCK           iosb;
+    FILE_STANDARD_INFORMATION fsi;
+    HANDLE                    h = NULL;
+    PUCHAR                    buf;
+    ULONG                     size;
+    NTSTATUS                  status;
+
+    RtlInitUnicodeString(&name, Path);
+    InitializeObjectAttributes(&oa, &name,
+        OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL);
+
+    status = ZwCreateFile(&h, GENERIC_READ, &oa, &iosb, NULL, FILE_ATTRIBUTE_NORMAL,
+                          FILE_SHARE_READ, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    status = ZwQueryInformationFile(h, &iosb, &fsi, sizeof(fsi), FileStandardInformation);
+    if (!NT_SUCCESS(status) || fsi.EndOfFile.HighPart != 0 || fsi.EndOfFile.LowPart == 0) {
+        ZwClose(h);
+        return NT_SUCCESS(status) ? STATUS_INVALID_PARAMETER : status;
+    }
+    size = fsi.EndOfFile.LowPart;
+    buf  = (PUCHAR)ExAllocatePool2(POOL_FLAG_NON_PAGED, size, BTBCM_POOLTAG);
+    if (buf == NULL) {
+        ZwClose(h);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+    status = ZwReadFile(h, NULL, NULL, NULL, &iosb, buf, size, NULL, NULL);
+    ZwClose(h);
+    if (!NT_SUCCESS(status)) {
+        ExFreePoolWithTag(buf, BTBCM_POOLTAG);
+        return status;
+    }
+    Ctx->Hcd    = buf;
+    Ctx->HcdLen = (ULONG)iosb.Information;
+    return STATUS_SUCCESS;
+}
+
+VOID
+BtBcmFreeFirmware(_Inout_ PBTBCM_CONTEXT Ctx)
+{
+    if (Ctx->Hcd != NULL) {
+        ExFreePoolWithTag(Ctx->Hcd, BTBCM_POOLTAG);
+        Ctx->Hcd    = NULL;
+        Ctx->HcdLen = 0;
+    }
+}
+
+/* ---- B3: operational async RX read pump ---- */
+static EVT_WDF_REQUEST_COMPLETION_ROUTINE BtBcmRxComplete;
+
+/* runtime RX: a fully reassembled HCI packet from the chip. Final integration
+   forwards this to the upper edge (inbox BthUart / a BTHX shim); placeholder. */
+static VOID
+BtBcmRuntimeRxCb(PVOID Context, const UCHAR *Packet, ULONG Length)
+{
+    UNREFERENCED_PARAMETER(Context);
+    UNREFERENCED_PARAMETER(Packet);
+    UNREFERENCED_PARAMETER(Length);
+    /* TODO (B4): hand the HCI packet up to BthUart/bthport. */
+}
+
+static NTSTATUS
+BtBcmSubmitRead(_Inout_ PBTBCM_CONTEXT Ctx)
+{
+    WDF_REQUEST_REUSE_PARAMS reuse;
+    NTSTATUS status;
+
+    WDF_REQUEST_REUSE_PARAMS_INIT(&reuse, WDF_REQUEST_REUSE_NO_FLAGS, STATUS_SUCCESS);
+    WdfRequestReuse(Ctx->RxRequest, &reuse);
+
+    status = WdfIoTargetFormatRequestForRead(Ctx->UartTarget, Ctx->RxRequest,
+                                             Ctx->RxMem, NULL, NULL);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    WdfRequestSetCompletionRoutine(Ctx->RxRequest, BtBcmRxComplete, Ctx);
+    if (WdfRequestSend(Ctx->RxRequest, Ctx->UartTarget, WDF_NO_SEND_OPTIONS) == FALSE) {
+        return WdfRequestGetStatus(Ctx->RxRequest);
+    }
+    return STATUS_SUCCESS;
+}
+
+static VOID
+BtBcmRxComplete(WDFREQUEST Request, WDFIOTARGET Target,
+                PWDF_REQUEST_COMPLETION_PARAMS Params, WDFCONTEXT Context)
+{
+    PBTBCM_CONTEXT Ctx = (PBTBCM_CONTEXT)Context;
+    ULONG_PTR got = Params->IoStatus.Information;
+    UNREFERENCED_PARAMETER(Request);
+    UNREFERENCED_PARAMETER(Target);
+
+    if (NT_SUCCESS(Params->IoStatus.Status) && got != 0) {
+        H4RxFeed(&Ctx->Rx, Ctx->RxBuf, (ULONG)got);
+    }
+    if (Ctx->Running) {
+        (void)BtBcmSubmitRead(Ctx);   /* re-arm the continuous read */
+    }
+}
+
+NTSTATUS
+BtBcmStartRxPump(_Inout_ PBTBCM_CONTEXT Ctx)
+{
+    WDF_OBJECT_ATTRIBUTES attr;
+    NTSTATUS status;
+
+    WDF_OBJECT_ATTRIBUTES_INIT(&attr);
+    attr.ParentObject = Ctx->Device;
+    status = WdfRequestCreate(&attr, Ctx->UartTarget, &Ctx->RxRequest);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    status = WdfMemoryCreatePreallocated(WDF_NO_OBJECT_ATTRIBUTES, Ctx->RxBuf,
+                                         sizeof(Ctx->RxBuf), &Ctx->RxMem);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    /* switch the RX reassembler to the runtime handler (bring-up is done) */
+    H4RxInit(&Ctx->Rx, BtBcmRuntimeRxCb, Ctx);
+    Ctx->Running = TRUE;
+    return BtBcmSubmitRead(Ctx);
+}

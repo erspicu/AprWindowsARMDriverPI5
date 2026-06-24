@@ -33,7 +33,7 @@ Write-Host "== Compiling ($Arch, KMDF $KmdfVer) ==" -ForegroundColor Cyan
 foreach ($s in $Sources) {
     $obj = Join-Path $OutDir ([IO.Path]::GetFileNameWithoutExtension($s) + ".obj"); $Objs += $obj
     $a = @("/nologo","/c","/W4","/O2","/Gy","/Zi","/kernel","/GS","/D_WIN64","/DNDEBUG",
-           "/DNTDDI_VERSION=0x0A000000","/D_WIN32_WINNT=0x0A00",
+           "/DNTDDI_VERSION=0x0A00000C","/D_WIN32_WINNT=0x0A00",   # Win11 (ExAllocatePool2 etc.)
            "/DKMDF_VERSION_MAJOR=$KmdfMaj","/DKMDF_VERSION_MINOR=$KmdfMin") + $ArchDefs + @(
            "/I$IncKmdf","/I$IncKmCrt","/I$IncKm","/I$IncShared","/Fo$obj","/Fd$OutDir\btbcm.pdb",$s)
     & $Cl @a

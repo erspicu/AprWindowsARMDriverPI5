@@ -40,9 +40,11 @@ KMDF **Bluetooth Extensible Transport Driver**（`bthx.h`）夾在 inbox `bthpor
 
 - ☑ **B1 [x64-build] 取資源 + 開 UART/GPIO IoTarget**（`uart.c` `BtBcmParseResources`/`BtBcmOpenTargets`，接 `driver.c` `EvtDevicePrepareHardware`）：解析 `CmResourceTypeConnection`(SERIAL/GPIO) → `RESOURCE_HUB_CREATE_PATH_FROM_ID`（需 `#define RESHUB_USE_HELPER_ROUTINES`）→ `WdfIoTargetOpen`。**ARM64 /kernel 編譯乾淨。**
 - ☑ **B2 [x64-build] init 期同步收發 + bring-up**（`uart.c` `BtBcmBringUp`）：拉高 BT_REG_ON、UART 115200、用 init_sm（A4）跑 bring-up（`WdfIoTargetSendWriteSynchronously` Tx + `...ReadSynchronously` 餵 A1 parser → 推進狀態機）、完成後 host 切 3M baud + purge。**ARM64 /kernel 乾淨。**（功能待 Win11 實機）
-- ☐ **B3 [x64-build] 常駐 RX read pump**（運行期）：async `WdfIoTargetFormatRequestForRead`+completion 串接，餵 A1 parser → 交給上層。
-- ☐ **B4 [改] 上層整合走 BthUart**：寫 INF `Class=Bluetooth`+ClassGuid + `Include=bth.inf`/`Needs=BthUart.NT(.Services)`；BCM `.hcd` 載入（`ZwReadFile`）+ bring-up 當 vendor/filter 行為。（不再自寫 BTHX IOCTL；若 BthUart 不支援 BCM patchram 才退回自訂 filter）
-- ☐ **B5 .hcd 載入**：`ZwReadFile` 讀 `\SystemRoot\System32\drivers\BCM4345C0.hcd` → 餵 `BtBcmBringUp`。
+- ☑ **B3 [x64-build] 常駐 RX read pump**（`uart.c` `BtBcmStartRxPump`/`BtBcmRxComplete`）：async `WdfRequestCreate`+`WdfMemoryCreatePreallocated`+`WdfIoTargetFormatRequestForRead`，completion 餵 H4 parser 並 re-arm（runtime callback 待接上層）。**ARM64 /kernel 乾淨。**
+- ☑ **B4 [草稿] BthUart 路線 INF + ACPI ASL**：`btbcm.inf`（Class=Bluetooth、btbcm.sys FDO、`Needs=BthUart.NT` 註記為計畫）+ `bt.asl`（BTH0：UARTSerialBusV2 指 PL011 + GpioIo GPIO29）。**確切 BthUart 組合方式需實機驗證。**
+- ☑ **B5 .hcd 載入**（`uart.c` `BtBcmLoadFirmware`，`driver.c` D0Entry）：`ZwReadFile` 讀 `\SystemRoot\System32\drivers\BCM4345C0.hcd` → NonPaged → `BtBcmBringUp`。D0Exit/ReleaseHardware 清理。**ARM64 /kernel 乾淨。**
+
+> **Phase B WDF glue（B1-B5）全 ARM64 /kernel 編譯乾淨、PnP/D0 接線完成。** 功能驗證（M2 心跳起）需 Pi5 Win11 ARM64 實機。
 
 ## Phase C — 實機（Pi5）
 

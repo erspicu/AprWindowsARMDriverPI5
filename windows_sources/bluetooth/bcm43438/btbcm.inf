@@ -1,0 +1,71 @@
+; btbcm.inf - Pi5 (BCM4345C0) UART Bluetooth transport.  DRAFT (validate on target)
+;
+; Loads btbcm.sys as the KMDF function driver for the ACPI BT device (bt.asl).
+; btbcm.sys does the BCM-specific bring-up (open UART + reset GPIO, load
+; BCM4345C0.hcd Patch-RAM, switch to 3M baud) - the part inbox drivers don't do.
+;
+; Upper-edge integration (TO VALIDATE on the Win11/ARM64 target):
+;   Standard H4 UART BT normally rides the INBOX BthUart.sys serial-HCI transport
+;   (bthx.h is NOT in the public WDK). Intended model: our driver handles the
+;   vendor bring-up, then the HCI transport is presented via BthUart/bthport.
+;   The exact composition (lower filter under BthUart vs. our FDO + a BTHX shim)
+;   is hardware-validated work; the Needs=BthUart.NT lines below are the planned
+;   route and are left commented until confirmed.  See PLAN.md / MD/Note/bluetooth/.
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Bluetooth
+ClassGuid   = {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
+Provider    = %ProviderName%
+CatalogFile = btbcm.cat
+DriverVer   =
+PnpLockdown = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%DeviceDesc% = BtBcm_Device, ACPI\BCM2EA6     ; must match bt.asl _HID
+
+[DestinationDirs]
+DefaultDestDir = 13                            ; driver store
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+btbcm.sys = 1
+
+[BtBcm_Device.NT]
+CopyFiles = BtBcm_CopyFiles
+; Include = bth.inf
+; Needs   = BthUart.NT                          ; (planned) inbox serial-HCI stack
+
+[BtBcm_CopyFiles]
+btbcm.sys
+
+[BtBcm_Device.NT.HW]
+AddReg = BtBcm_HwAddReg
+
+[BtBcm_HwAddReg]
+; operational baud (matches Pi5 DT max-speed); read by the driver
+HKR,, "OperBaud", 0x00010001, 3000000
+
+[BtBcm_Device.NT.Services]
+AddService = btbcm, 0x00000002, BtBcm_Service
+; Include = bth.inf
+; Needs   = BthUart.NT.Services                 ; (planned)
+
+[BtBcm_Service]
+DisplayName   = %ServiceDesc%
+ServiceType   = 1                              ; SERVICE_KERNEL_DRIVER
+StartType     = 3                              ; SERVICE_DEMAND_START
+ErrorControl  = 1                              ; SERVICE_ERROR_NORMAL
+ServiceBinary = %13%\btbcm.sys
+
+[Strings]
+ProviderName     = "AprWindowsARMDriverPI5"
+ManufacturerName = "Raspberry Pi (port)"
+DiskName         = "BCM4345C0 BT Install Disk"
+DeviceDesc       = "Raspberry Pi 5 Bluetooth (BCM4345C0, UART)"
+ServiceDesc      = "BCM4345C0 BT UART Transport"

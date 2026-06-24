@@ -152,6 +152,14 @@ typedef struct _BTBCM_CONTEXT {
     UCHAR         BdAddr[6];      /* MAC (from ACPI/DT local-bd-address) */
     H4_RX         Rx;             /* RX reassembly during bring-up + run */
     BTI           Bti;            /* bring-up state machine */
+    /* operational RX pump (B3) */
+    WDFREQUEST    RxRequest;
+    WDFMEMORY     RxMem;
+    UCHAR         RxBuf[512];
+    BOOLEAN       Running;        /* TRUE once bring-up done, pump active */
+    /* firmware (B5) */
+    PUCHAR        Hcd;            /* .hcd blob (NonPaged); freed on cleanup */
+    ULONG         HcdLen;
 } BTBCM_CONTEXT, *PBTBCM_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(BTBCM_CONTEXT, BtBcmGetContext)
@@ -166,4 +174,9 @@ NTSTATUS BtBcmUartWriteSync(_In_ PBTBCM_CONTEXT Ctx, _In_reads_(Len) PUCHAR Buf,
 NTSTATUS BtBcmUartReadSync(_In_ PBTBCM_CONTEXT Ctx, _Out_writes_(Len) PUCHAR Buf, _In_ ULONG Len,
                            _In_ ULONG TimeoutMs, _Out_ PULONG BytesRead);
 NTSTATUS BtBcmBringUp(_Inout_ PBTBCM_CONTEXT Ctx, _In_reads_(HcdLen) const UCHAR *Hcd, _In_ ULONG HcdLen);
+/* B5: load \SystemRoot\System32\drivers\BCM4345C0.hcd into Ctx->Hcd (NonPaged) */
+NTSTATUS BtBcmLoadFirmware(_Inout_ PBTBCM_CONTEXT Ctx, _In_ PCWSTR Path);
+VOID     BtBcmFreeFirmware(_Inout_ PBTBCM_CONTEXT Ctx);
+/* B3: operational async RX read pump (post bring-up) */
+NTSTATUS BtBcmStartRxPump(_Inout_ PBTBCM_CONTEXT Ctx);
 #endif
