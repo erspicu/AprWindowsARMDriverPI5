@@ -1,0 +1,68 @@
+; cyw43455.inf - Pi5 CYW43455 SDIO Wi-Fi (NetAdapterCx + WHD).  DRAFT (validate on target)
+;
+; Function driver for the SDIO WLAN function that inbox sdbus.sys enumerates from
+; the CYW43455 card. The driver: gets GUID_SDBUS_INTERFACE_STANDARD (sdbus_glue.c),
+; reads Chip ID 0x4345, runs WHD over the SDIO control plane, and presents a
+; NetAdapterCx Ethernet adapter (see whd_port/ + ../PLAN.md).
+;
+; SDIO hardware id: Broadcom VID 0x02D0; PID for CYW43455 is commonly 0xA9BF /
+; 0x4345 (CONFIRM on target via Device Manager once sdbus enumerates the card).
+; The SD host controller is described in ACPI; the WLAN function is auto-enumerated
+; by sdbus, so this INF matches the SD\VID&PID. OOB host-wake GPIO (if used) is an
+; ACPI resource on the child - Pi5 BT/WiFi notes say in-band IRQ is enough for MVP.
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Net
+ClassGuid   = {4d36e972-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderName%
+CatalogFile = cyw43455.cat
+DriverVer   =
+PnpLockdown = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTARM64
+
+[Standard.NTARM64]
+%DeviceDesc% = Cyw_Device, SD\VID_02D0&PID_A9BF   ; CONFIRM PID on target
+%DeviceDesc% = Cyw_Device, SD\VID_02D0&PID_4345
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%
+[SourceDisksFiles]
+cyw43455.sys = 1
+
+[Cyw_Device.NT]
+CopyFiles = Cyw_CopyFiles
+Characteristics = 0x84            ; NCF_PHYSICAL | NCF_HAS_UI (NetAdapterCx)
+*IfType         = 6               ; IF_TYPE_ETHERNET_CSMACD (fake-Ethernet)
+*MediaType      = 0               ; NdisMedium802_3
+*PhysicalMediaType = 14           ; NdisPhysicalMedium802_3
+
+[Cyw_CopyFiles]
+cyw43455.sys
+
+[Cyw_Device.NT.HW]
+AddReg = Cyw_HwAddReg
+[Cyw_HwAddReg]
+; SSID/passphrase for the fake-Ethernet MVP are read from the service Parameters
+; key at runtime (UTF-16 -> ASCII); see MD/Note/wifi/.
+
+[Cyw_Device.NT.Services]
+AddService = cyw43455, 0x00000002, Cyw_Service
+[Cyw_Service]
+DisplayName   = %ServiceDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\cyw43455.sys
+
+[Strings]
+ProviderName     = "AprWindowsARMDriverPI5"
+ManufacturerName = "Raspberry Pi (port)"
+DiskName         = "CYW43455 Wi-Fi Install Disk"
+DeviceDesc       = "Raspberry Pi 5 Wi-Fi (CYW43455, SDIO)"
+ServiceDesc      = "CYW43455 Wi-Fi (WHD/NetAdapterCx)"

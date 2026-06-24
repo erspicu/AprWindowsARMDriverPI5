@@ -38,7 +38,11 @@ NetAdapterCx(乙太網) ─ WHD core(C lib) ─ cyhal_sdio_win.c ─ sdbus.sys �
 - ☑ **B2 [x64-build] `cy_rtos_win.c`**（`whd_port/`）：實作 WHD 用的 `cy_rtos_*` 子集（semaphore/mutex/thread/timer/delay/time）→ `KeSemaphore`/`KeMutex`/`PsCreateSystemThread`/`KeSetTimerEx`+DPC/`KeDelayExecutionThread`/`KeQueryInterruptTime`。**ARM64 /kernel 編譯乾淨**（PASSIVE_LEVEL；功能待實機）。
 - ☑ **B3 [x64-build] `cyhal_sdio_win.c`**（`whd_port/`）：`cyhal_sdio_send_cmd`(CMD52)/`bulk_transfer`(CMD53) 解碼 SD argument → 轉接 `sdio_core.c` 的 `SDIO_OPS`。**ARM64 /kernel 乾淨**。**剩 sdbus glue**（SDIO_OPS 接 `SubmitRequest` + in-band IRQ）= Win11 實機那塊。
 - ☐ **B4 build 整合**：WHD `.c` 直接編進 .sys（非 user-mode lib）；CRT stub（`snprintf`→`RtlStringCbVPrintfA`）；macro（`WHD_BUS_SDIO`/`CYW43455`/`WHD_CUSTOM_HAL`）；`__attribute__((packed))`→`#pragma pack`。
-- ☐ **B5 [x64-build] SDIO function driver（KMDF）**：INF match `SD\VID_02D0&PID_xxxx`、取 `GUID_SDBUS_INTERFACE_STANDARD`。
+- 🟡 **B5 [x64-build] SDIO function driver（KMDF）**：
+  - ☑ **sdbus 傳輸 glue**（`whd_port/sdbus_glue.c`）：`WdfFdoQueryForInterface(GUID_SDBUS_INTERFACE_STANDARD)` → SDIO_OPS 的 `Cmd52`/`Cmd53` 用 **`SDBUS_REQUEST_PACKET`(SDRF_DEVICE_COMMAND + SDCMD_DESCRIPTOR) + `SdBusSubmitRequest`**（CMD52=`SDCMD_IO_RW_DIRECT`、CMD53=`SDCMD_IO_RW_EXTENDED`+MDL）。**ARM64 /kernel 編譯乾淨。** + `WifiSdioReadChipId`（接 A1，實機讀 0x4345）。
+  - ☑ **INF**：`cyw43455.inf`（Class=Net、match `SD\VID_02D0&PID_A9BF/4345`、NetAdapterCx 特性）。PID 需實機確認。
+  - ☐ KMDF DriverEntry/EvtDeviceAdd 組裝（接 B6）。
+  - 注意：`SDBUS_INTERFACE_STANDARD`/`SDBUS_REQUEST_PACKET`/`SdBusSubmitRequest` **在 `km\ntddsd.h`**（不在已移除的舊 `sdbus.h`）；`SDCMD_DESCRIPTOR` 在 `km\sddef.h`。
 - ☐ **B6 [x64-build] NetAdapterCx**：`NetDeviceInitConfig`→`NetAdapterCreate`→capabilities（MAC 用 `whd_wifi_get_mac_address`、TX/RX caps）→Tx/Rx queue（`EvtPacketQueueAdvance`，memcpy 與 WHD ring buffer 同步）。
 - ☐ **B7 韌體嵌入**：`cyfmac43455-sdio.bin`/`.clm_blob` 編成 PE resource；NVRAM 用 A2 預處理。
 

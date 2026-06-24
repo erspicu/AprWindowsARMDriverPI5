@@ -24,6 +24,12 @@ whd_wifi_on(drv, &ifp)                                           // load firmwar
 | `whd_port.h` | Windows `cy_rtos_*` types (`cy_semaphore_t`=KSEMAPHORE, `cy_mutex_t`=KMUTEX, `cy_thread_t`=PETHREAD, `cy_timer_t`=KTIMER+KDPC) + prototypes | — | ✅ compiles |
 | `cy_rtos_win.c` | the **cy_rtos_* subset WHD uses** (semaphore/mutex/thread/timer/delay/time) | `KeInitializeSemaphore`/`KeWaitForSingleObject`/`KeReleaseSemaphore`, `KeInitializeMutex`, `PsCreateSystemThread`, `KeSetTimerEx`+DPC, `KeDelayExecutionThread`, `KeQueryInterruptTime` | ✅ compiles, **PASSIVE_LEVEL**; logic untested (needs target) |
 | `cyhal_sdio_win.c` | `cyhal_sdio_send_cmd` (CMD52) / `cyhal_sdio_bulk_transfer` (CMD53) | decode SD argument → `SDIO_OPS` (`../sdio_core.c`) | ✅ compiles; forwards to SDIO_OPS |
+| `sdbus_glue.c` / `.h` | `SDIO_OPS` Cmd52/Cmd53 over the **real inbox sdbus.sys** (`SDBUS_REQUEST_PACKET` + `SdBusSubmitRequest`, `<ntddsd.h>`/`<sddef.h>`) + `WifiSdioReadChipId` | `WdfFdoQueryForInterface(GUID_SDBUS_INTERFACE_STANDARD)` → `SDRF_DEVICE_COMMAND` + `SDCMD_DESCRIPTOR` | ✅ **ARM64 /kernel-clean**; live path needs target |
+
+> Note: the SD function-driver interface (`SDBUS_INTERFACE_STANDARD` / `SDBUS_REQUEST_PACKET` /
+> `SdBusSubmitRequest`) lives in **`km\ntddsd.h`** (+ `SDCMD_DESCRIPTOR` in `km\sddef.h`) on this WDK —
+> NOT the old `sdbus.h`. It uses `SDRF_DEVICE_COMMAND` + a raw SD command descriptor (CMD52/CMD53),
+> not the WDK8-era `SDRF_READ_PORT` style.
 
 WHD-used `cy_rtos_*` (from grep on WHD/src): `init/get/set/deinit_semaphore`,
 `init/get/set/deinit_mutex`, `create/join/exit_thread`, `init/start/stop/deinit/is_running_timer`,
