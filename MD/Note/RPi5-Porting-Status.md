@@ -2,10 +2,14 @@
 
 > 更新：2026-06-25　｜　硬體全清單見 `RPi5-Driver-Porting-Inventory.md`
 >
-> **近況（2026-06-25）**：Pi5 **Linux** 唯讀基準機已可 SSH（萃取硬體真相校正驅動，見 `20260625-0030-...md`）。
-> WiFi/藍牙已從規劃推進到實作：**藍牙 Phase A(sim 35/35)+Phase B WDF glue 全 /kernel 乾淨**；
-> **WiFi 控制平面(sim 25/25)+WHD port layer(cy_rtos/cyhal/sdbus glue)全 /kernel 乾淨**。
-> 仍待 **Pi5 跑 Win11-ARM 開發目標**做功能驗證（載入/bring-up/實機）。
+> **近況（2026-06-25）**：Pi5 **Linux** 唯讀基準機已可 SSH（萃取硬體真相校正驅動，見 `20260625-0030-...md`、`-0200-...md`）。
+> WiFi/藍牙從規劃推進到實作：**藍牙 Phase A(sim 35/35)+Phase B WDF glue 全 /kernel 乾淨**；
+> **WiFi 控制平面(sim 25/25)+WHD port layer(cy_rtos/cyhal/sdbus glue)全 /kernel 乾淨**；
+> **顯示 DOD**(mailbox/EDID/HVS dlist，sim 36/36)。
+> **本輪 sweep — 8 個原 notes-only/未做裝置推到「核心邏輯 sim 驗證 + ARM64 /kernel 乾淨 + Pi5 源碼校正」**：
+> UART PL011(18)、HDMI 音訊 ACR/InfoFrame(12)、HEVC SAND detile(6)、相機 ISP RAW10/Bayer(11)、
+> 溫度感測 AVS(7)、HDMI CEC(13)、PMIC/regulator/電源鍵(10)、OTP(12)。
+> → **所有「有暫存器/封包格式介面」的裝置都有 HAL/邏輯 + sim 了**。仍待 **Pi5 跑 Win11-ARM 開發目標**做功能驗證（載入/bring-up）。
 
 ## ⚠️ 重要前提與交接模型（雙機分工）
 **無實機 + 無 Windows-on-Pi5 韌體（UEFI ECAM/ACPI、RP1 PCIe 列舉）下，硬體驅動無法「功能完整」**（無法載入/驗證）。本專案採**雙機交接**：
@@ -49,14 +53,17 @@
 | ~~Ethernet（#11）~~ 🔵 | **GEM 引擎 x64 模擬 22/22**（descriptor/MAC/MDIO） | NBL→ring 接線、DMA buffer、PHY link 需實機 |
 | ~~音訊 HAL（#1）~~ 🔵 ／ PortCls（#2） | **DW I2S 引擎 x64 模擬 20/20**；#2 DataRangeIntersection 待 | codec、真實 DMA、PortCls 端點 |
 | ~~Bluetooth（#12）~~ 🔵 | **Phase A 邏輯**（H4 framing/RX parser/.hcd parser/vendor payloads/bring-up 狀態機）**x64 sim 35/35**；**Phase B WDF glue（B1-B5）全 ARM64 /kernel 編譯乾淨**：開 UART+GPIO IoTarget、用狀態機跑 bring-up、RX pump、`.hcd` 載入(ZwReadFile)、PnP/D0 接線、INF/ASL 草稿；Pi5 實機數據驗證 | 功能驗證需 Win11 實機；**上層走 inbox BthUart.sys**（`bthx.h` 不在現代 WDK），BthUart 組合方式待實機 |
+| ~~顯示 DOD（#3）~~ 🟢→🔵 | KMDDOD 骨架 + **mailbox property builder / EDID parser(+1080p fallback) / HVS display-list builder** sim 36/36 + /kernel 乾淨；DDI 接線 QueryDeviceDescriptor(EDID)/CommitVidPn(mailbox)。vc4/V3D 暫存器 offset 已抓（`20260625-0200`）| flip MMIO(寫 SCALER_DISPLISTX)/UEFI GOP 劫持、VidPn 列舉、VSync 需實機 |
+| **多媒體/感測 sweep（核心邏輯）** 🟡→🔵 | **8 模組 sim 全綠 + /kernel 乾淨 + Pi5 源碼校正**：UART PL011(18,`uart/rp1-pl011`)、HDMI 音訊 ACR/InfoFrame(12,`hdmi-audio`)、HEVC SAND detile(6,`hevc/sand.c`)、相機 ISP RAW10/Bayer(11,`camera/isp`)、溫度感測 AVS(7,`thermal/bcm2712-avs`)、HDMI CEC(13,`hdmi-cec`)、PMIC/regulator/電源鍵(10,`pmic/da9090`)、OTP(12,`otp/rpi-otp`) | 各自接 SerCx2/MFT/PortCls/AVStream/sdbus + DMA/中斷 + 實機驗證 |
 
 ### 🟡 需「大工程或缺件」（x64 可寫結構，完整功能仍需實機/額外專案）
 | 項目 | 卡點 |
 |------|------|
 | GPU V3D（#13） | **UMD**（Mesa v3d 移植＝獨立大專案）＋ V3D MMU/CL 提交需實機 |
 | WiFi（🟡→🟢 #6） | **改走 WHD+NetAdapterCx**（不寫 dot11/WDI）。SDIO 控制平面 A1-A3 **sim 25/25**；**WHD source 已取得**，port layer（`cy_rtos_win`/`cyhal_sdio_win`/**`sdbus_glue`** 接真 sdbus.sys）全 **ARM64 /kernel 乾淨**；Pi5 實機數據驗證。卡：KMDF DriverEntry+NetAdapterCx 組裝 + WHD 整合 + 韌體載入需實機 |
-| 相機（🟡 #7） | capture filter/pin/datarange（可寫結構）＋ ISP/sensor 需實機 |
-| 顯示 modeset、DSI/VEC、HEVC、IOMMU… | vc4 HVS/PixelValve 時序、DXVA 等需實機 |
+| 相機（🟡→🔵 #7） | ISP 核心邏輯（RAW10/Bayer）+ AVStream 骨架已備；CFE DMA/sensor I2C/DeviceMFT 接線 + ISP/sensor 需實機 |
+| HEVC / HDMI 音訊 / CEC / 溫度 / PMIC / OTP（核心邏輯 🔵）| 各自的 MFT/PortCls/I2C/mailbox 接線 + DMA/中斷需實機（核心轉換邏輯已 sim 驗證）|
+| 顯示 DSI/DPI/VEC、IOMMU、PiSP 硬體 ISP、VCHIQ、pcie-rp1 列舉 | WDDM 多輸出時序 / ACPI IORT / M2M ISP / VideoCore 介面 / PCIe 列舉，需實機或大工程 |
 
 > **下一步 x64 端建議優先序**：① ACPI 補完 + 各驅動 INF（→ ✅，部署綁定關鍵）→ ② 核心 HAL 推到 🔵 邏輯完整（SDHCI/Ethernet/I2C 先）+ 模擬 harness。
 > **Pi5 端接手清單**：先決 = Windows-on-Pi5 開機（UEFI + PCIe RC + RP1 列舉 + ACPI）；之後逐一把 🔵 校驗成 ✅。
@@ -113,7 +120,7 @@
 ### A. RP1 周邊（PCIe 底下，靠 #4 bus driver 列舉後各自綁定）
 | 驅動 | Linux 來源 | Windows 框架 | 備註 |
 |------|-----------|--------------|------|
-| ~~RP1 UART ×6~~ | `amba-pl011.c`(axi) | SerCx2 | ➖ Windows inbox `SerPl011.sys`（ACPI `ARMH0011`）；AXI 變體待實機確認 |
+| ~~RP1 UART ×6~~ 🔵 | `amba-pl011.c`(axi) | SerCx2 / inbox SerPl011 | 標準 PL011 可用 inbox `SerPl011.sys`(`ARMH0011`)；**PL011 HAL（baud divisor/LCRH/CR/FR）sim 18/18 + /kernel 乾淨**（`uart/rp1-pl011`，BT transport 下緣）|
 | ~~RP1 GPIO / pinctrl~~ | `pinctrl-rp1.c` | **GpioClx** | ✅ 見 🟢 #9；RIO 讀寫/方向/FUNCSEL 已接；餘中斷 demux（需實機）|
 | ~~RP1 I2C ×7~~ | `i2c-designware-platdrv.c` | SpbCx | ✅ 控制器驅動見 🟢 #5（`rp1i2c.sys`）；7 實例各掛 ACPI 節點 |
 | ~~RP1 SPI ×8~~ | `spi-dw-mmio.c` | SpbCx | ✅ 控制器驅動見 🟢 #6（`rp1spi.sys`） |
@@ -146,12 +153,12 @@
 | IOMMU | `bcm2712-iommu.c` | DMA remapping | |
 | ~~Mailbox (VC)~~ | `bcm2835-mailbox.c` | KMDF | ✅ 見 🟢 #16（`bcmmbox.sys`）；🔵 sim 8/8 |
 | ~~RNG~~ | `iproc-rng200.c` | KMDF | ✅ 見 🟢 #15（`bcmrng.sys`）；🔵 sim 6/6 |
-| 溫度/AVS | `bcm2711_thermal.c` | ACPI 熱區 | |
+| ~~溫度/AVS~~ 🔵 | `bcm2711_thermal.c` | ACPI 熱區/KMDF | **raw→m°C 轉換 sim 7/7 + /kernel 乾淨**（`thermal/bcm2712-avs`）；Pi5 係數 slope=-550/offset=450000（`bcm2712-ds.dtsi`）|
 | ~~Watchdog/PM~~ | `bcm2835_wdt.c` | KMDF | ✅ 見 🟢 #18（`bcmwdt.sys`）；🔵 sim 11/11 |
-| HDMI ×2 (vc4) | `vc4_hdmi.c` | WDDM | 與 #3 Stage B 整合 |
-| HVS/PixelValve/MOP | `vc4_*` | WDDM | |
-| HEVC 解碼 | `hevc_d.c` | MFT/DXVA | |
-| ISP (PiSP) | `pisp_be.c` | AVStream | |
+| HDMI ×2 + HVS/PixelValve/MOP (vc4) | `vc4_hdmi.c`/`vc4_*` | WDDM | 與 #3 DOD 整合；HDMI CEC 邏輯見下；暫存器 offset 已抓（`20260625-0200`）|
+| ~~HDMI CEC~~ 🔵 | `vc4_hdmi.c`(cec) | KMDF/CEC | **CEC frame build/parse sim 13/13 + /kernel 乾淨**（`hdmi-cec`）|
+| HEVC 解碼 | `hevc_d.c` | MFT/DXVA | 🔵 SAND detile（見 A 區 / `hevc/sand.c`）|
+| ISP (PiSP BE) | `pisp_be.c` | AVStream | 硬體 M2M ISP（大工程）；前端 RAW10/Bayer 見 `camera/isp` |
 | USB OTG (內建) | `dwc2/` | inbox/自訂 | 次要 |
 
 ### C. 外接／板載晶片
@@ -161,7 +168,9 @@
 | ~~Bluetooth (4345C0)~~ | `hci_bcm.c` | **inbox BthUart.sys** | 🔵 見 #12；Phase A sim 35/35 + Phase B WDF glue /kernel 乾淨 + Pi5 驗證；`bthx.h` 不在現代 WDK→走 BthUart |
 | Ethernet PHY | `net/phy/broadcom.c` | 併入 NDIS | |
 | 風扇 (PWM) | `pwm-fan.c` | KMDF+熱區 | |
-| 電源鍵 | `gpio_keys.c` | HID 按鈕 | 消費者型（GPIO pin→HID/ACPI button），非 register-HAL |
+| ~~PMIC (DA9090)~~ 🔵 | `regulator/da90xx` | KMDF(power) | **線性 regulator vsel codec + onkey 解碼 sim 10/10 + /kernel 乾淨**（`pmic/da9090`）；DA9090 各 rail 確切電壓表需 datasheet |
+| ~~電源鍵~~ 🔵 | `*_onkey.c`/`gpio_keys.c` | HID 按鈕 | onkey 事件解碼併入 PMIC（`pmic/da9090`）；或 GPIO→HID button |
+| ~~OTP~~ 🔵 | `nvmem/raspberrypi-otp.c` | KMDF/nvmem | **OTP mailbox 訊息 build/parse sim 12/12 + /kernel 乾淨**（`otp/rpi-otp`，GET/SET_USER/CUSTOMER_OTP）|
 | 狀態 LED | `leds-gpio.c` | KMDF | 消費者型（用 GPIO pin，非 register-HAL）；走 GpioClx 消費者 |
 | ~~RTC (韌體)~~ | `rtc-rpi.c` | KMDF/ACPI | ✅ 見 🟢 #23（`rpirtc.sys`）；韌體型走 mailbox #16 |
 
