@@ -7,6 +7,7 @@ Abstract:    x64 simulation of the DOD pure logic: the VideoCore mailbox
 #include <stdio.h>
 #include "../vc_mailbox.h"
 #include "../edid.h"
+#include "../hvs_dlist.h"
 
 static int g_pass, g_fail;
 static void check(const char *what, int cond)
@@ -99,11 +100,41 @@ static void test_edid(void)
     check("short buffer -> error", EdidParse(e, 64, &info) != 0);
 }
 
+static void test_hvs(void)
+{
+    ULONG ctl0, pos2, dl[8], n;
+
+    printf("-- HVS display-list builder --\n");
+
+    ctl0 = HvsBuildCtl0(HVS_PIXEL_FORMAT_RGBA8888, HVS_PIXEL_ORDER_XRGB,
+                        HVS_TILING_LINEAR, 5, 1, 1);
+    check("CTL0 pixel format == RGBA8888(7)", (ctl0 & 0xF) == 7);
+    check("CTL0 order == XRGB(2)", ((ctl0 >> 13) & 0x3) == 2);
+    check("CTL0 tiling == LINEAR(0)", ((ctl0 >> 20) & 0x3) == 0);
+    check("CTL0 size words == 5", ((ctl0 >> 24) & 0x3F) == 5);
+    check("CTL0 VALID set", (ctl0 & (1u<<30)) != 0);
+    check("CTL0 END set", (ctl0 & (1u<<31)) != 0);
+
+    pos2 = HvsBuildPos2(1920, 1080);
+    check("POS2 width == 1920", (pos2 & 0xFFF) == 1920);
+    check("POS2 height == 1080", ((pos2 >> 16) & 0xFFF) == 1080);
+
+    n = HvsBuildPlaneDlist(dl, 8, 1920, 1080, 7680, 0x40000000u);
+    check("plane dlist == 5 words", n == 5);
+    check("dlist[2] == POS2(1920x1080)", dl[2] == pos2);
+    check("dlist[3] == fb phys 0x40000000", dl[3] == 0x40000000u);
+    check("dlist[4] == pitch 7680", dl[4] == 7680);
+
+    n = HvsBuildPlaneDlist(dl, 3, 1920, 1080, 7680, 0x40000000u);
+    check("dlist overflow -> 0", n == 0);
+}
+
 int main(void)
 {
     printf("== RP1 vc4 DOD logic simulation ==\n");
     test_mailbox();
     test_edid();
+    test_hvs();
     printf("== %d passed, %d failed ==\n", g_pass, g_fail);
     return g_fail ? 1 : 0;
 }

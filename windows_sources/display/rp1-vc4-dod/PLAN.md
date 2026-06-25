@@ -30,9 +30,9 @@
 
 ## Phase C — DDI 接線（x64-build 可編譯；邏輯靠實機）
 - ☑ **C1** `DodQueryDeviceDescriptor` 回 EDID（用 B3 `EdidGetDefault1080p`，處理 DescriptorOffset/Length 分塊）。**ARM64 /kernel 乾淨。**
-- ☐ **C2** VidPn 三劍客（`IsSupportedVidPn`/`EnumCofuncModality`/`RecommendFunctionalVidPn`）先 hardcode 一個解析度。（目前 `IsSupportedVidPn` 回 TRUE 骨架）
+- 🟡 **C2** VidPn 三劍客（`IsSupportedVidPn`/`EnumCofuncModality`/`RecommendFunctionalVidPn`）：目前 `IsSupportedVidPn` 回 TRUE 骨架；**完整 mode 列舉需 DXGK_VIDPN_INTERFACE 呼叫，偏 Stage D（實機）**。
 - ☑ **C3** `DodCommitVidPn`：用 B1 `VcMboxSetPhysSize` 把 set-size mailbox 訊息建進 `dev->MboxBuf`（Stage D 送韌體 + 程式 HVS）。**ARM64 /kernel 乾淨。**
-- ☐ **C4** `DodPresentDisplayOnly`/flip：先 memcpy 到 UEFI GOP fb；後寫 HVS `SCALER_DISPLISTX`（offset 見 `20260625-0200-...`）。
+- 🟡 **C4** HVS dlist builder（`hvs_dlist.c` `HvsBuildCtl0`/`HvsBuildPos2`/`HvsBuildPlaneDlist`）：**sim 36/36 + ARM64 /kernel 乾淨**，用真實 `SCALER_CTL0`/`POS2` 欄位遮罩（gen5 序列待實機）。**剩**：`DodPresentDisplayOnly` flip 接線（memcpy 到 GOP fb / 寫 `SCALER_DISPLISTX`）= Stage D。
 - ☐ **C5** `DdiInterruptRoutine`/軟體 timer VSync。
 
 ## Phase D — 實機（Pi5 Win11 ARM64）
