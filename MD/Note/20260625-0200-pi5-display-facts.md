@@ -12,6 +12,14 @@
 | **MOPLET** | `0x107c501000` | `vc4_txp_ops` | 較小的 pipeline |
 | **V3D**（GPU render）| `0x1002000000` | `v3d` drm minor 0 | 與顯示分離（render-only）|
 
+## DSI / VEC 在哪（重要修正，2026-06-25 實機 DT 確認）
+- **DSI/VEC 的編碼器在 RP1**（不是 BCM2712）：`pcie@.../rp1/dsi@110000`、`rp1/dsi@128000`、`rp1/vec@144000`，
+  device-tree 預設 **`status=disabled`**（沒接面板/沒啟 overlay）。BCM2712 那邊是 **HVS 合成 + HDMI×2 + MOP/MOPLET(writeback)**。
+- 目前實際暴露的 DRM 輸出只有 `HDMI-A-1/2` + `Writeback-1/2`（MOP/MOPLET）。
+- **DSI ×2**：Pi5 兩個 MIPI 接口（DSI 或 CSI），接官方 7"/觸控 DSI 面板時啟用。
+- **VEC（composite）**：硬體在（RP1），但 Pi5 無 3.5mm 孔 → composite 走板上測試焊點 + overlay 啟用，極 niche。
+- 影響：DSI/VEC 輸出牽涉 **RP1 + PCIe 路徑**（同其他 RP1 周邊）；移植時 driver 要透過 RP1 bus 綁定。
+
 ## 其他
 - DRM：`card0`(v3d render) + `card1`(vc4 display，connectors HDMI-A-1/2 + Writeback-1/2)。
 - 開機 cmdline：`video=HDMI-A-1:2560x1440@60D`（forced on），`console=ttyAMA10,115200`。
