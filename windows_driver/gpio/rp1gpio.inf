@@ -1,6 +1,6 @@
 ;
 ; rp1gpio.inf - RP1 GPIO controller (GpioClx / KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI50006 matches rp1.asl GPIO _HID.
+; PnP ID ACPI\RPIF0001 matches rp1.asi (uefi_fixed) GPIO _HID.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1gpio.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1gpio.DeviceDesc% = rp1gpio_Device, ACPI\RPI50006
+%rp1gpio.DeviceDesc% = rp1gpio_Device, ACPI\RPIF0001
 
 [rp1gpio_Device.NT]
 CopyFiles = Drivers_Dir

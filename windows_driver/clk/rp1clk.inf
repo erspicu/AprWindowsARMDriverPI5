@@ -1,6 +1,6 @@
 ;
 ; rp1clk.inf - RP1 clock generator / PLLs (bespoke KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI5000D matches rp1.asl CLK0 _HID. reg @BAR1+0x18000.
+; PnP ID ACPI\RPIF000A matches rp1.asi (uefi_fixed) CLK0 _HID. reg @BAR1+0x18000.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1clk.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1clk.DeviceDesc% = rp1clk_Device, ACPI\RPI5000D
+%rp1clk.DeviceDesc% = rp1clk_Device, ACPI\RPIF000A
 
 [rp1clk_Device.NT]
 CopyFiles = Drivers_Dir

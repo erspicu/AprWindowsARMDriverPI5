@@ -1,6 +1,6 @@
 ;
 ; rp1pio.inf - RP1 PIO (programmable IO) block (bespoke KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI5000C matches rp1.asl PIO0 _HID. reg @BAR1+0x178000.
+; PnP ID ACPI\RPIF000B matches rp1.asi (uefi_fixed) PIO0 _HID. reg @BAR1+0x178000.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1pio.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1pio.DeviceDesc% = rp1pio_Device, ACPI\RPI5000C
+%rp1pio.DeviceDesc% = rp1pio_Device, ACPI\RPIF000B
 
 [rp1pio_Device.NT]
 CopyFiles = Drivers_Dir

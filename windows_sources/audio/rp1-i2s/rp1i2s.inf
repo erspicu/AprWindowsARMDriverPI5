@@ -1,7 +1,7 @@
 ;
 ; rp1i2s.inf - RP1 DesignWare I2S (Phase 1 WDM skeleton), ARM64
 ;
-; NOTE: ACPI\RPI5I2S0 is a PLACEHOLDER hardware id. The real device sits under
+; NOTE: ACPI\RPIF0007 is a PLACEHOLDER hardware id. The real device sits under
 ; RP1 -> PCIe and is not yet enumerable on Windows; once the platform ACPI
 ; describes the I2S block (MMIO _CRS), set the matching id here. For pure
 ; load-testing without hardware the service can also be started as a software
@@ -29,7 +29,7 @@ rp1i2s.sys = 1
 %ProviderName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%DeviceDesc% = Rp1I2s_Install, ACPI\RPI5I2S0
+%DeviceDesc% = Rp1I2s_Install, ACPI\RPIF0007
 
 [Rp1I2s_Install.NT]
 CopyFiles = Rp1I2s_CopyFiles

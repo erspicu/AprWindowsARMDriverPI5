@@ -1,6 +1,6 @@
 ;
 ; rp1adc.inf - RP1 SAR ADC (bespoke KMDF function driver), ACPI-enumerated.
-; PnP ID ACPI\RPI5000B matches rp1.asl ADC0 _HID. Register block @BAR1+0xC8000,
+; PnP ID ACPI\RPIF0008 matches rp1.asi (uefi_fixed) ADC0 _HID. Register block @BAR1+0xC8000,
 ; one-shot polled conversion (READY bit) -> no interrupt resource.
 ;
 [Version]
@@ -25,7 +25,7 @@ rp1adc.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1adc.DeviceDesc% = rp1adc_Device, ACPI\RPI5000B
+%rp1adc.DeviceDesc% = rp1adc_Device, ACPI\RPIF0008
 
 [rp1adc_Device.NT]
 CopyFiles = Drivers_Dir

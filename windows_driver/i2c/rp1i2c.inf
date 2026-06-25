@@ -1,6 +1,6 @@
 ;
 ; rp1i2c.inf - RP1 DesignWare I2C controller (SpbCx / KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI50001 matches rp1.asl I2C0..6 _HID.
+; PnP ID ACPI\RPIF0002 matches rp1.asi (uefi_fixed) I2C0..6 _HID.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1i2c.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1i2c.DeviceDesc% = rp1i2c_Device, ACPI\RPI50001
+%rp1i2c.DeviceDesc% = rp1i2c_Device, ACPI\RPIF0002
 
 [rp1i2c_Device.NT]
 CopyFiles = Drivers_Dir

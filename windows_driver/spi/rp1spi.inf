@@ -1,6 +1,6 @@
 ;
 ; rp1spi.inf - RP1 DesignWare SPI controller (SpbCx / KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI50002 matches rp1.asl SPI0..5 _HID.
+; PnP ID ACPI\RPIF0004 matches rp1.asi (uefi_fixed) SPI0..5 _HID.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1spi.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1spi.DeviceDesc% = rp1spi_Device, ACPI\RPI50002
+%rp1spi.DeviceDesc% = rp1spi_Device, ACPI\RPIF0004
 
 [rp1spi_Device.NT]
 CopyFiles = Drivers_Dir

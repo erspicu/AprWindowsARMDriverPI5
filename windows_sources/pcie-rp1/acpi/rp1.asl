@@ -1,6 +1,12 @@
 //
 // rp1.asl - ACPI (SSDT) for RP1-over-PCIe on Windows on ARM (complete child set).
 //
+// ⚠️ SUPERSEDED (2026-06-26): 主線改走「做法 A = 客製 UEFI ACPI」，正式的 RP1 ACPI 在
+//    `uefi_fixed/edk2-platforms/Silicon/RaspberryPi/RpiSiliconPkg/Include/Rp1.asi`
+//    （已編進 uefi_build/RPI_EFI.fd）。**驅動 INF 現對齊該檔的 `RPIF000n` 方案**，
+//    本檔仍用舊 `RPI5xxxx`、已與 INF 不一致。保留作 SSDT 注入(做法 B)參考；若要走
+//    asl.exe /loadtable 捷徑，請改用 Rp1.asi 的 HID 重生。決策見 20260625-2230 note。
+//
 // Strategy (see MD/Note/20260621-0415-pcie-rp1-acpi-prereq-design.md):
 //   * PCI0 = BCM2712 PCIe root complex (PNP0A08), enumerated by inbox pci.sys
 //     from firmware ECAM/MCFG. _CRS here carries the bus-number range; the

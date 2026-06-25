@@ -1,6 +1,6 @@
 ;
 ; rp1pwm.inf - RP1 PWM controller (bespoke KMDF), ACPI-enumerated.
-; PnP ID ACPI\RPI50005 matches rp1.asl PWM0/PWM1 _HID. reg @BAR1+0x9C000.
+; PnP ID ACPI\RPIF0006 matches rp1.asi (uefi_fixed) PWM0/PWM1 _HID. reg @BAR1+0x9C000.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1pwm.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1pwm.DeviceDesc% = rp1pwm_Device, ACPI\RPI50005
+%rp1pwm.DeviceDesc% = rp1pwm_Device, ACPI\RPIF0006
 
 [rp1pwm_Device.NT]
 CopyFiles = Drivers_Dir

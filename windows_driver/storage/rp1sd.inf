@@ -1,6 +1,6 @@
 ;
 ; rp1sd.inf - RP1/BCM2712 SD/MMC host (SdPort miniport), ACPI-enumerated.
-; PnP ID ACPI\RPI50009 matches rp1.asl SDC0/1 _HID. SdPort miniport (not KMDF).
+; PnP ID ACPI\RPIF000C matches rp1.asi (uefi_fixed) SDC0/1 _HID. SdPort miniport (not KMDF).
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1sd.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1sd.DeviceDesc% = rp1sd_Device, ACPI\RPI50009
+%rp1sd.DeviceDesc% = rp1sd_Device, ACPI\RPIF000C
 
 [rp1sd_Device.NT]
 CopyFiles = Drivers_Dir

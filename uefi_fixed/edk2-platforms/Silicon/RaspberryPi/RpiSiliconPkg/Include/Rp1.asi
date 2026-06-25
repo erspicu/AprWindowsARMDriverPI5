@@ -20,7 +20,8 @@
  *  differ by _UID (standard ACPI). Suffix must be hex digits:
  *    RPIF0001 GPIO        RPIF0002 I2C  (_UID 0-6)   RPIF0004 SPI (_UID 0-8)
  *    RPIF0005 UART (0-5)  RPIF0006 PWM  (_UID 0-1)    RPIF0007 I2S (_UID 0-2)
- *    RPIF0008 ADC         RPIF0009 Ethernet
+ *    RPIF0008 ADC         RPIF0009 Ethernet           RPIF000A CLK
+ *    RPIF000B PIO         RPIF000C SD/MMC (_UID 0-1)
  *  Our class-driver INFs match ACPI\RPIF000n.
  *
  **/
@@ -158,3 +159,13 @@ RP1_SIMPLE_DEV (I2S2, "RPIF0007", 2, RP1_I2S2_BASE, 0x1000)
 // ADC + Ethernet.
 RP1_SIMPLE_DEV (ADC0, "RPIF0008", 0, RP1_ADC_BASE, 0x100)
 RP1_SIMPLE_DEV (ETH0, "RPIF0009", 0, RP1_ETH_BASE, 0x4000)
+
+// Clocks (PLL/clock tree). Driver: rp1clk.sys.
+RP1_SIMPLE_DEV (CLK0, "RPIF000A", 0, RP1_CLOCKS_MAIN_BASE, 0x1000)
+
+// PIO (programmable I/O). Driver: rp1pio.sys.
+RP1_SIMPLE_DEV (PIO0, "RPIF000B", 0, RP1_PIO_BASE, 0x1000)
+
+// SD/MMC x2 (RP1 SDIO). Driver: rp1sd.sys (sdport miniport).
+RP1_SIMPLE_DEV (SDC0, "RPIF000C", 0, RP1_SDIO0_BASE, 0x1000)
+RP1_SIMPLE_DEV (SDC1, "RPIF000C", 1, RP1_SDIO1_BASE, 0x1000)

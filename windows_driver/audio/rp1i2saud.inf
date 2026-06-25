@@ -1,6 +1,6 @@
 ;
 ; rp1i2saud.inf - RP1 I2S PortCls/WaveRT render audio driver (ARM64).
-; Placeholder hardware id ACPI\RPI5I2S0 (see Phase 1 note re: RP1->PCIe/ACPI).
+; Placeholder hardware id ACPI\RPIF0007 (see Phase 1 note re: RP1->PCIe/ACPI).
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1i2saud.sys = 1
 %ProviderName% = AudioDevice,NTARM64
 
 [AudioDevice.NTARM64]
-%DeviceDesc% = Rp1Aud_Install, ACPI\RPI5I2S0
+%DeviceDesc% = Rp1Aud_Install, ACPI\RPIF0007
 
 [Rp1Aud_Install.NT]
 Include   = ks.inf, wdmaudio.inf

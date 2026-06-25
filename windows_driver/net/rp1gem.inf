@@ -1,6 +1,6 @@
 ;
 ; rp1gem.inf - RP1 Gigabit Ethernet (Cadence GEM, NDIS 6.30), ACPI-enumerated.
-; PnP ID ACPI\RPI50007 matches rp1.asl ETH0 _HID.
+; PnP ID ACPI\RPIF0009 matches rp1.asi (uefi_fixed) ETH0 _HID.
 ;
 [Version]
 Signature   = "$WINDOWS NT$"
@@ -24,7 +24,7 @@ rp1gem.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%rp1gem.DeviceDesc% = rp1gem.ndi, ACPI\RPI50007
+%rp1gem.DeviceDesc% = rp1gem.ndi, ACPI\RPIF0009
 
 [rp1gem.ndi.NT]
 Characteristics    = 0x84
