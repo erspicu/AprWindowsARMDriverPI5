@@ -22,7 +22,7 @@
 ## 路徑分類（什麼放哪）
 - `windows_sources/` — Windows 端驅動**原始碼**，依裝置類別分子目錄。
 - `windows_driver/` — build 產出（.sys/.cat）+ 手寫 INF。
-- `sources/` — Raspberry Pi Linux 核心原始碼（移植參考，未納版控）。
+- `sources/` — Raspberry Pi Linux 核心原始碼 + Infineon WHD（移植參考，**未納版控**，~1.5GB）。**重建法（換機/Win11 ARM 端必看）→ `MD/Skill/sources-rebuild.md`**。
 - `MD/` — 文件：`Skill/`(how-to)、`Note/`(know-how)、`History/`(歷程)。
 - `temp/` — **暫存/下載一律放這**，勿散落根目錄。
 
