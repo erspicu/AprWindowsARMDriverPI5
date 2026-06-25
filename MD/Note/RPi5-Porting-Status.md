@@ -2,17 +2,21 @@
 
 > 更新：2026-06-25　｜　硬體全清單見 `RPi5-Driver-Porting-Inventory.md`
 >
-> **近況（2026-06-25）**：Pi5 **Linux** 唯讀基準機已可 SSH（萃取硬體真相校正驅動，見 `20260625-0030-...md`、`-0200-...md`）。
+> **近況（2026-06-26）**：Pi5 **Linux** 唯讀基準機已可 SSH（萃取硬體真相校正驅動，見 `20260625-0030-...md`、`-0200-...md`）。
 > WiFi/藍牙從規劃推進到實作：**藍牙 Phase A(sim 35/35)+Phase B WDF glue 全 /kernel 乾淨**；
 > **WiFi 控制平面(sim 25/25)+WHD port layer(cy_rtos/cyhal/sdbus glue)全 /kernel 乾淨**；
 > **顯示 DOD**(mailbox/EDID/HVS dlist，sim 36/36)。
-> **本輪 sweep — 8 個原 notes-only/未做裝置推到「核心邏輯 sim 驗證 + ARM64 /kernel 乾淨 + Pi5 源碼校正」**：
+> **8 個原 notes-only/未做裝置推到「核心邏輯 sim 驗證 + ARM64 /kernel 乾淨 + Pi5 源碼校正」**：
 > UART PL011(18)、HDMI 音訊 ACR/InfoFrame(12)、HEVC SAND detile(6)、相機 ISP RAW10/Bayer(11)、
 > 溫度感測 AVS(7)、HDMI CEC(13)、PMIC/regulator/電源鍵(10)、OTP(12)。
-> → **所有「有暫存器/封包格式介面」的裝置都有 HAL/邏輯 + sim 了**。仍待 **Pi5 跑 Win11-ARM 開發目標**做功能驗證（載入/bring-up）。
+> 🔥 **UEFI 韌體側打通（2026-06-26）**：WSL 實測能 build **原版 worproject Pi5 UEFI**（`RPI_EFI.fd` 2MB / 1m29s），
+> 並 build 出**我們的修改版**——把 RP1 周邊(GPIO/I2C/SPI/UART/PWM/I2S/ADC/ETH)寫入 ACPI(`ACPI\RPIF000n`)、編入 `uefi_build/RPI_EFI.fd`。
+> 配方+踩坑 `MD/Skill/pi5-uefi-build.md`；修改源 `uefi_fixed/`；30MB 可編譯備份 `uefi_sources_backup/`(端到端驗證)。
+> → **「讓 RP1 周邊在 Win11-ARM 被 ACPI 列舉」的韌體先決已備齊**；仍待 **Pi5 跑 Win11-ARM 實機**刷韌體 + 載驅動做 bring-up。
 
 ## ⚠️ 重要前提與交接模型（雙機分工）
 **無實機 + 無 Windows-on-Pi5 韌體（UEFI ECAM/ACPI、RP1 PCIe 列舉）下，硬體驅動無法「功能完整」**（無法載入/驗證）。本專案採**雙機交接**：
+> 📌 更新（2026-06-26）：**韌體側已不再是空白**——我們已能 build 出含 RP1 周邊 ACPI 的 Pi5 UEFI（`uefi_build/RPI_EFI.fd`，見 ✅ 段）。剩「在實機刷此韌體 + 載驅動」需 Pi5 Win11-ARM。
 - **x64 端（本機 Zen2/Win11）**：cross-compile 產出、把邏輯補齊、寫模擬 harness 驗證序列、寫 ACPI/INF。
   → 硬體驅動可推到 **🔵 邏輯完整** 天花板；純軟體交付物（ACPI/INF/inbox）可達 **✅ 完整完成**。
 - **Pi5 端（日後 Pi5/Win11-ARM 實機）**：實機載入、KDNET 雙機 WinDbg 除錯、校時序/中斷/DMA。
@@ -103,6 +107,7 @@
 | 項目 | 內容 | 產出 |
 |------|------|------|
 | **ACPI 描述（SSDT）** | PNP0A08 host bridge + RP1 PCIe 子裝置（UART×6/I2C×7/SPI×6/I2S×3/audio/PWM×2/ADC/PIO/CLK/GPIO/ETH/CSI×2/DMA/USB×2，GpioInt=RP1 IRQ）**＋ 9 個 BCM2712 SoC 裝置**（SD/eMMC×2、mailbox、RNG、watchdog、DMA、GPIO、RTC、BSC-I2C×2、SPI；QWordMemory 真實位址 + GIC GSIV）| `windows_sources/pcie-rp1/acpi/rp1.aml`（asl.exe, **4529 B**；經 Pi5 實測校正位址/IRQ）|
+| **UEFI 韌體（含我們的 ACPI）✅ 可 build** | 在 worproject Pi5 UEFI(EDK2) 的 `Rp1.asi` 加入 RP1 周邊 Device 節點（`ACPI\RPIF0001-0009`，沿用其 PBAR+offset+共享中斷機制），WSL 實測編出 `RPI_EFI.fd`（2,031,616 B）。原版+修改版皆驗證通過 | `uefi_build/RPI_EFI.fd`（成品）；源 `uefi_fixed/`；配方 `MD/Skill/pi5-uefi-build.md`；備份 `uefi_sources_backup/`（30MB，端到端驗證）|
 | **驅動 INF（25/25 全部）** | 每個 `.sys` 都有對應 INF（先前 15 + 本輪補 10：rp1adc/rp1pwm/rp1pio/rp1clk/bcmmbox/bcmrng/bcmwdt/bcmdma/bcm2712gpio/rpirtc）；PnP ID 對齊 ACPI HID | `windows_driver/<類別>/*.inf`（**infverif 全 VALID**）|
 | **Pi5 實測校正（loop d8511a69）** | 依真 BCM2712+RP1 矽晶片校正 7 處錯誤規格：USB IRQ、RP1 I2C SCL(200MHz)、SDHCI base+歸屬、RP1 SPI BaudDiv、I2S CCR、BCM SPI ClkDiv(750MHz)、BCM I2C DIV(72→100kHz/108MHz)；sim 全綠 | `MD/Note/20260621-0720-pi5-linux-hardware-facts.md` |
 
