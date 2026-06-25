@@ -7,6 +7,7 @@ Abstract:    DriverEntry + GpioClx client registration for the RP1 GPIO driver.
     in ddi.c (next stage). DriverEntry registers the registration packet with
     GpioClx; AddDevice bridges WDF device creation to GpioClx.
 --*/
+#define INITGUID            // instantiate GUID_RP1BUS_INTERFACE_STANDARD in this driver
 #include "common.h"
 
 DRIVER_INITIALIZE DriverEntry;

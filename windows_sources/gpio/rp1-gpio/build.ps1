@@ -26,6 +26,7 @@ $Link = Join-Path $Vc.FullName "bin\Hostx64\$ClArch\link.exe"
 
 $IncKmdf="$Kit\Include\wdf\kmdf\$KmdfVer"
 $IncKmCrt="$Kit\Include\$SdkVer\km\crt"; $IncKm="$Kit\Include\$SdkVer\km"; $IncShared="$Kit\Include\$SdkVer\shared"
+$IncRp1Bus = (Resolve-Path (Join-Path $ProjDir "..\..\pcie-rp1\rp1bus")).Path  # rp1bus_if.h (bus interface contract)
 $LibKm="$Kit\Lib\$SdkVer\km\$ClArch"; $LibKmdf="$Kit\Lib\wdf\kmdf\$ClArch\$KmdfVer"
 
 $OutDir = Join-Path $ProjDir "build\$Arch"; New-Item -ItemType Directory -Force $OutDir | Out-Null
@@ -36,7 +37,7 @@ foreach ($s in $Sources) {
     $obj = Join-Path $OutDir ([IO.Path]::GetFileNameWithoutExtension($s) + ".obj"); $Objs += $obj
     $a = @("/nologo","/c","/W4","/O2","/Gy","/Zi","/kernel","/GS","/D_WIN64","/DNDEBUG",
            "/DKMDF_VERSION_MAJOR=$KmdfMaj","/DKMDF_VERSION_MINOR=$KmdfMin") + $ArchDefs + @(
-           "/I$IncKmdf","/I$IncKmCrt","/I$IncKm","/I$IncShared","/Fo$obj","/Fd$OutDir\rp1gpio.pdb",$s)
+           "/I$IncKmdf","/I$IncKmCrt","/I$IncKm","/I$IncShared","/I$IncRp1Bus","/Fo$obj","/Fd$OutDir\rp1gpio.pdb",$s)
     & $Cl @a
     if ($LASTEXITCODE -ne 0) { throw "cl failed on $([IO.Path]::GetFileName($s)) (exit $LASTEXITCODE)" }
 }

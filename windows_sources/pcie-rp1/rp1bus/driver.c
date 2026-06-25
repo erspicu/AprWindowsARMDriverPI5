@@ -25,7 +25,7 @@ static const RP1_PERIPH g_Rp1Periph[] = {
     { L"RP1\\SPI0",  L"0", 0x050000, 0x400,   19 },
     { L"RP1\\SPI1",  L"1", 0x054000, 0x400,   20 },
     { L"RP1\\I2S0",  L"0", 0x0A0000, 0x1000,  14 },
-    { L"RP1\\GPIO0", L"0", 0x0D0000, 0xC000,   0 },  // RIO+pads+gpio bank window
+    { L"RP1\\GPIO0", L"0", 0x0D0000, 0x2C000,  0 },  // io(0x0d0000)+rio(0x0e0000)+pads(0x0f0000), 0xc000 each
     { L"RP1\\ETH0",  L"0", 0x100000, 0x4000,   6 },
     { L"RP1\\USB0",  L"0", 0x200000, 0x100000,30 },  // xHCI #0
     { L"RP1\\USB1",  L"1", 0x300000, 0x100000,31 },  // xHCI #1

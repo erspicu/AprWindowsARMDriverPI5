@@ -34,6 +34,31 @@ Rp1GpioPrepareController(_In_ WDFDEVICE Device, _In_ PVOID Context,
         }
         memIdx++;
     }
+    // No CM memory resources => we were enumerated as an rp1bus child (RP1\GPIO0)
+    // rather than described in ACPI. Query the parent bus interface for our
+    // already-mapped BAR1 window and slice the three GPIO sub-blocks out of it.
+    if (ctx->Hw.GpioBase == NULL) {
+        NTSTATUS qs = WdfFdoQueryForInterface(Device, &GUID_RP1BUS_INTERFACE_STANDARD,
+                          (PINTERFACE)&ctx->BusIf, sizeof(ctx->BusIf), 1, NULL);
+        if (NT_SUCCESS(qs)) {
+            PUCHAR win = (PUCHAR)ctx->BusIf.GetRegisterBase(ctx->BusIf.InterfaceHeader.Context);
+            ULONG  len = ctx->BusIf.GetRegisterSize(ctx->BusIf.InterfaceHeader.Context);
+            if (win != NULL && len >= (RP1_GPIO_PADS_SUBOFF + RP1_GPIO_SUBLEN)) {
+                ctx->Hw.GpioBase = win + RP1_GPIO_IO_SUBOFF;   ctx->Hw.GpioLen = RP1_GPIO_SUBLEN;
+                ctx->Hw.RioBase  = win + RP1_GPIO_RIO_SUBOFF;  ctx->Hw.RioLen  = RP1_GPIO_SUBLEN;
+                ctx->Hw.PadsBase = win + RP1_GPIO_PADS_SUBOFF; ctx->Hw.PadsLen = RP1_GPIO_SUBLEN;
+                ctx->FromBusIf = TRUE;   // keep the interface ref until ReleaseController
+            } else {
+                // window too small / unmapped: drop the ref, fail prepare below.
+                ctx->BusIf.InterfaceHeader.InterfaceDereference(ctx->BusIf.InterfaceHeader.Context);
+                RtlZeroMemory(&ctx->BusIf, sizeof(ctx->BusIf));
+            }
+        }
+    }
+
+    if (ctx->Hw.GpioBase == NULL) {
+        return STATUS_DEVICE_CONFIGURATION_ERROR;   // neither ACPI nor rp1bus gave us a window
+    }
     // Degrade gracefully if the platform provided a single combined window.
     if (ctx->Hw.RioBase == NULL)  ctx->Hw.RioBase  = ctx->Hw.GpioBase;
     if (ctx->Hw.PadsBase == NULL) ctx->Hw.PadsBase = ctx->Hw.GpioBase;
@@ -46,14 +71,22 @@ Rp1GpioReleaseController(_In_ WDFDEVICE Device, _In_ PVOID Context)
 {
     PRP1GPIO_CONTEXT ctx = (PRP1GPIO_CONTEXT)Context;
     UNREFERENCED_PARAMETER(Device);
-    if (ctx->Hw.PadsBase != NULL && ctx->Hw.PadsBase != ctx->Hw.GpioBase) {
-        MmUnmapIoSpace(ctx->Hw.PadsBase, ctx->Hw.PadsLen);
-    }
-    if (ctx->Hw.RioBase != NULL && ctx->Hw.RioBase != ctx->Hw.GpioBase) {
-        MmUnmapIoSpace(ctx->Hw.RioBase, ctx->Hw.RioLen);
-    }
-    if (ctx->Hw.GpioBase != NULL) {
-        MmUnmapIoSpace(ctx->Hw.GpioBase, ctx->Hw.GpioLen);
+
+    if (ctx->FromBusIf) {
+        // The window is owned (mapped) by rp1bus; just release our interface ref.
+        ctx->BusIf.InterfaceHeader.InterfaceDereference(ctx->BusIf.InterfaceHeader.Context);
+        RtlZeroMemory(&ctx->BusIf, sizeof(ctx->BusIf));
+        ctx->FromBusIf = FALSE;
+    } else {
+        if (ctx->Hw.PadsBase != NULL && ctx->Hw.PadsBase != ctx->Hw.GpioBase) {
+            MmUnmapIoSpace(ctx->Hw.PadsBase, ctx->Hw.PadsLen);
+        }
+        if (ctx->Hw.RioBase != NULL && ctx->Hw.RioBase != ctx->Hw.GpioBase) {
+            MmUnmapIoSpace(ctx->Hw.RioBase, ctx->Hw.RioLen);
+        }
+        if (ctx->Hw.GpioBase != NULL) {
+            MmUnmapIoSpace(ctx->Hw.GpioBase, ctx->Hw.GpioLen);
+        }
     }
     ctx->Hw.GpioBase = ctx->Hw.RioBase = ctx->Hw.PadsBase = NULL;
     return STATUS_SUCCESS;
@@ -187,9 +220,9 @@ Rp1GpioConnectIoPins(_In_ PVOID Context, _In_ PGPIO_CONNECT_IO_PINS_PARAMETERS C
     /* Map the GpioClx pull request to the RP1 PADS bias (was previously dropped,
      * leaving inputs floating). GpioPinPull: Default=0, Up=1, Down=2, None=3. */
     switch (ConnectParameters->PullConfiguration) {
-    case GpioPinPullUp:   pud = RP1_PUD_UP;   break;
-    case GpioPinPullDown: pud = RP1_PUD_DOWN; break;
-    default:              pud = RP1_PUD_OFF;  break;   /* None / Default */
+    case GPIO_PIN_PULL_CONFIGURATION_PULLUP:   pud = RP1_PUD_UP;   break;
+    case GPIO_PIN_PULL_CONFIGURATION_PULLDOWN: pud = RP1_PUD_DOWN; break;
+    default:                                   pud = RP1_PUD_OFF;  break;   /* None / Default */
     }
 
     for (i = 0; i < ConnectParameters->PinCount; i++) {
