@@ -10,13 +10,19 @@
 | **`uefi_fixed/`** | **只放我們改/加的檔**（鏡像上游路徑）| ✅ 納版控 |
 | `uefi_build/` | build 產出（`RPI_EFI.fd` 等），丟 SD 卡用 | ⚙️ 二進位不版控，保留說明 |
 
+## 結構（按組件鏡像上游，build-uefi.sh 逐一 overlay）
+`uefi_fixed/<component>/...` 會覆蓋到 `~/rpi5-uefi/<component>/...`：
+- `edk2-platforms/Silicon/RaspberryPi/RpiSiliconPkg/Include/Rp1.asi` — 我們的 ACPI。
+- `edk2-non-osi/Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp` — 我們的開機 logo。
+
 ## 我們改了什麼（目前）
-- `Silicon/RaspberryPi/RpiSiliconPkg/Include/Rp1.asi`
-  - 上游只描述 RP1 底下的 **USB xHCI**（所以 stock Win11 只有鍵鼠/USB 能動）。
-  - 我們**新增** RP1 的 **GPIO / I2C / SPI / UART / PWM / I2S / ADC / Ethernet** 的 ACPI `Device` 節點，
-    沿用上游 `RP1_QWORDMEMORY_SET`（`PBAR + RP1_*_BASE`）+ 共享中斷 `PINT` 機制。
-  - `_HID` 用 `RPI0xxxx`，我們的 class driver INF 要 match `ACPI\RPI0xxxx`。
+- **ACPI（`Rp1.asi`）**：上游只描述 RP1 底下的 **USB xHCI**（所以 stock Win11 只有鍵鼠/USB 能動）。
+  我們**新增** RP1 的 **GPIO / I2C / SPI / UART / PWM / I2S / ADC / Ethernet** 的 ACPI `Device` 節點，
+  沿用上游 `RP1_QWORDMEMORY_SET`（`PBAR + RP1_*_BASE`）+ 共享中斷 `PINT`。
+  - `_HID` 用 **`RPIF000n`**（ACPI 規定後綴須 hex），class driver INF 要 match `ACPI\RPIF000n`。
   - 細節與決策見 `MD/Note/20260625-2230-pi5-uefi-acpi-integration.md`。
+- **開機 logo（`Logo.bmp`）**：在原 Raspberry Pi logo 底部加上「edited by erspicu_brox」。
+  - **維持 8-bit 索引、同尺寸（381×479）、同位元組大小（185012）** → EDK2 LogoDxe 直接相容、**不影響 FVMAIN 預算**（只剩 40 bytes free，不可變大）。
 
 > 此法＝「做法 A」（韌體 ACPI 描述）。另一條「做法 B」是 `windows_sources/pcie-rp1/rp1bus`（純後裝、零韌體），
 > 兩者擇一或並存；中斷 demux 兩者都仍需驅動處理。

@@ -24,14 +24,17 @@ mkdir -p "$HOME/bin"; ln -sf "$(command -v python3)" "$HOME/bin/python"
 export PATH="$HOME/bin:$PATH"
 export GIT_TERMINAL_PROMPT=0
 
-echo "== Overlaying uefi_fixed/ onto $RPI5_UEFI_DIR/edk2-platforms =="
-while IFS= read -r -d '' f; do
-  rel="${f#$FIXED/}"
-  case "$rel" in README.md|build-uefi.sh) continue ;; esac
-  dest="$RPI5_UEFI_DIR/edk2-platforms/$rel"
-  mkdir -p "$(dirname "$dest")"
-  cp -v "$f" "$dest"
-done < <(find "$FIXED" -type f -print0)
+echo "== Overlaying uefi_fixed/<component>/ onto $RPI5_UEFI_DIR/<component>/ =="
+# uefi_fixed mirrors by build component: edk2-platforms/, edk2-non-osi/, edk2/, etc.
+for comp in edk2 edk2-platforms edk2-non-osi arm-trusted-firmware; do
+  [ -d "$FIXED/$comp" ] || continue
+  while IFS= read -r -d '' f; do
+    rel="${f#$FIXED/$comp/}"
+    dest="$RPI5_UEFI_DIR/$comp/$rel"
+    mkdir -p "$(dirname "$dest")"
+    cp -v "$f" "$dest"
+  done < <(find "$FIXED/$comp" -type f -print0)
+done
 
 echo "== Building (worproject build.sh, model 5) =="
 cd "$RPI5_UEFI_DIR"
