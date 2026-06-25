@@ -23,6 +23,9 @@
   - 細節與決策見 `MD/Note/20260625-2230-pi5-uefi-acpi-integration.md`。
 - **開機 logo（`Logo.bmp`）**：在原 Raspberry Pi logo 底部加上「edited by erspicu_brox」。
   - **維持 8-bit 索引、同尺寸（381×479）、同位元組大小（185012）** → EDK2 LogoDxe 直接相容、**不影響 FVMAIN 預算**（只剩 40 bytes free，不可變大）。
+  - 改圖工具：`edit-logo.py`（Pillow；只改像素、保留 header/palette/尺寸）。重產：
+    `python3 edit-logo.py <原始 Logo.bmp> edk2-non-osi/Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp`
+    （改文字就編輯腳本內 `TEXT`；需 `pip install --user --break-system-packages Pillow`）。
 
 > 此法＝「做法 A」（韌體 ACPI 描述）。另一條「做法 B」是 `windows_sources/pcie-rp1/rp1bus`（純後裝、零韌體），
 > 兩者擇一或並存；中斷 demux 兩者都仍需驅動處理。
