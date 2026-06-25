@@ -77,6 +77,16 @@ static void test_edid(void)
     check("height 1080", info.Height == 1080);
     check("pixel clock 148500 kHz", info.PixelClockKHz == 148500);
 
+    /* B3: the built-in fallback EDID must round-trip through the parser */
+    {
+        UCHAR fb[128];
+        EDID_INFO fi;
+        EdidGetDefault1080p(fb);
+        check("default 1080p EDID parses", EdidParse(fb, 128, &fi) == 0);
+        check("default is 1920x1080", fi.Width == 1920 && fi.Height == 1080);
+        check("default pixclk 148500", fi.PixelClockKHz == 148500);
+    }
+
     /* bad header */
     e[0] = 0x11;
     check("bad header -> error", EdidParse(e, 128, &info) != 0);

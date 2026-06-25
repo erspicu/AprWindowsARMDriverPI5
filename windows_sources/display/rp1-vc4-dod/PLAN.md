@@ -29,10 +29,10 @@
 - ☐ **B3 [x64] hardcode 1080p EDID fallback** + mode 清單（讀不到 EDID 時用，可重用 B2 驗）。
 
 ## Phase C — DDI 接線（x64-build 可編譯；邏輯靠實機）
-- ☐ **C1** `DdiQueryDeviceDescriptor` 回 EDID（B2/B3）。
-- ☐ **C2** VidPn 三劍客（`IsSupportedVidPn`/`EnumCofuncModality`/`RecommendFunctionalVidPn`）先 hardcode 一個解析度。
-- ☐ **C3** `DdiCommitVidPn`：透過 mailbox（B1）設 mode + 配 fb。
-- ☐ **C4** `DdiSetVidPnSourceAddress`（flip）：先 memcpy 到 UEFI GOP fb；後寫 HVS display list。
+- ☑ **C1** `DodQueryDeviceDescriptor` 回 EDID（用 B3 `EdidGetDefault1080p`，處理 DescriptorOffset/Length 分塊）。**ARM64 /kernel 乾淨。**
+- ☐ **C2** VidPn 三劍客（`IsSupportedVidPn`/`EnumCofuncModality`/`RecommendFunctionalVidPn`）先 hardcode 一個解析度。（目前 `IsSupportedVidPn` 回 TRUE 骨架）
+- ☑ **C3** `DodCommitVidPn`：用 B1 `VcMboxSetPhysSize` 把 set-size mailbox 訊息建進 `dev->MboxBuf`（Stage D 送韌體 + 程式 HVS）。**ARM64 /kernel 乾淨。**
+- ☐ **C4** `DodPresentDisplayOnly`/flip：先 memcpy 到 UEFI GOP fb；後寫 HVS `SCALER_DISPLISTX`（offset 見 `20260625-0200-...`）。
 - ☐ **C5** `DdiInterruptRoutine`/軟體 timer VSync。
 
 ## Phase D — 實機（Pi5 Win11 ARM64）

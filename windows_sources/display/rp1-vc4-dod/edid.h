@@ -27,3 +27,7 @@ typedef struct _EDID_INFO {
 /* parse the first 128-byte EDID block. Returns 0 on success (Out filled),
    non-zero if header/checksum/length is bad or the first DTD is not a timing. */
 int EdidParse(_In_reads_(Len) const UCHAR *Edid, _In_ ULONG Len, _Out_ EDID_INFO *Out);
+
+/* B3: write a minimal valid 1920x1080@60 EDID base block (148.5 MHz pixel clock)
+   into Out, used as the fallback when the real monitor EDID cannot be read. */
+void EdidGetDefault1080p(_Out_writes_(EDID_BLOCK_SIZE) UCHAR *Out);

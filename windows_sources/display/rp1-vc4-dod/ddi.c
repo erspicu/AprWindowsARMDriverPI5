@@ -81,10 +81,26 @@ NTSTATUS
 DodQueryDeviceDescriptor(IN_CONST_PVOID MiniportDeviceContext, IN_ULONG ChildUid,
     INOUT_PDXGK_DEVICE_DESCRIPTOR DeviceDescriptor)
 {
+    UCHAR edid[EDID_BLOCK_SIZE];
+    ULONG avail;
+
     UNREFERENCED_PARAMETER(MiniportDeviceContext);
     UNREFERENCED_PARAMETER(ChildUid);
-    UNREFERENCED_PARAMETER(DeviceDescriptor);
-    return STATUS_MONITOR_NO_DESCRIPTOR;   // let dxgk synthesize default modes
+
+    // Return the monitor EDID. Phase C uses the built-in 1080p fallback; Phase D
+    // reads the real block via the VideoCore mailbox (VCTAG_GET_EDID_BLOCK).
+    if (DeviceDescriptor->DescriptorOffset >= EDID_BLOCK_SIZE) {
+        return STATUS_MONITOR_NO_MORE_DESCRIPTOR_DATA;
+    }
+    EdidGetDefault1080p(edid);
+    avail = EDID_BLOCK_SIZE - DeviceDescriptor->DescriptorOffset;
+    if (DeviceDescriptor->DescriptorLength > avail) {
+        DeviceDescriptor->DescriptorLength = avail;
+    }
+    RtlCopyMemory(DeviceDescriptor->DescriptorBuffer,
+                  edid + DeviceDescriptor->DescriptorOffset,
+                  DeviceDescriptor->DescriptorLength);
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -141,9 +157,22 @@ DodSetVidPnSourceVisibility(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_SETVIDPN
 NTSTATUS APIENTRY
 DodCommitVidPn(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_COMMITVIDPN_CONST pCommitVidPn)
 {
-    UNREFERENCED_PARAMETER(hAdapter);
+    PRP1DOD_DEVICE dev = (PRP1DOD_DEVICE)hAdapter;
+    ULONG w, h;
+
     UNREFERENCED_PARAMETER(pCommitVidPn);
-    return STATUS_SUCCESS;   // Stage B: program vc4 HVS/PixelValve/HDMI here
+
+    // Phase C: build the VideoCore "set physical size" mailbox message for the
+    // committed mode (default 1080p until the mode is read from the VidPN). Phase
+    // D sends MboxBuf to the firmware (which does HDMI modeset + framebuffer
+    // alloc), then the driver programs the HVS display list (SCALER_DISPLISTX).
+    w = (dev->Width  != 0) ? dev->Width  : 1920;
+    h = (dev->Height != 0) ? dev->Height : 1080;
+    dev->Width  = w;
+    dev->Height = h;
+    dev->MboxLen = VcMboxSetPhysSize(dev->MboxBuf, RTL_NUMBER_OF(dev->MboxBuf), w, h);
+
+    return STATUS_SUCCESS;   // Stage D: send mailbox + program HVS/HDMI
 }
 
 NTSTATUS APIENTRY

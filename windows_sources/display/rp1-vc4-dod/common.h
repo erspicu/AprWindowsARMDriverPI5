@@ -8,6 +8,8 @@ Abstract:    RP1/vc4 Display-Only Driver (WDDM DOD) - Phase: GPU/Display Stage A
 
 #include <ntddk.h>
 #include <dispmprt.h>     // pulls d3dkmddi.h / d3dkmdt.h; KMDDOD_INITIALIZATION_DATA
+#include "edid.h"         // EDID parser + 1080p fallback (Phase B)
+#include "vc_mailbox.h"   // VideoCore mailbox property builder (Phase B)
 
 #define RP1DOD_POOLTAG  '1DOD'   // 'DOD1'
 
@@ -20,4 +22,6 @@ typedef struct _RP1DOD_DEVICE {
     PVOID            FbVirtual;
     ULONG            FbLength;
     ULONG            Width, Height, Pitch;
+    ULONG            MboxBuf[64];      // VideoCore mailbox message staging (Phase C)
+    ULONG            MboxLen;          // bytes in MboxBuf
 } RP1DOD_DEVICE, *PRP1DOD_DEVICE;
