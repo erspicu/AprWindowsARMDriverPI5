@@ -22,7 +22,10 @@
   - `_HID` 用 **`RPIF000n`**（ACPI 規定後綴須 hex），class driver INF 要 match `ACPI\RPIF000n`。
   - 細節與決策見 `MD/Note/20260625-2230-pi5-uefi-acpi-integration.md`。
 - **開機 logo（`Logo.bmp`）**：在原 Raspberry Pi logo 底部加上「edited by erspicu_brox」。
-  - **維持 8-bit 索引、同尺寸（381×479）、同位元組大小（185012）** → EDK2 LogoDxe 直接相容、**不影響 FVMAIN 預算**（只剩 40 bytes free，不可變大）。
+  - **維持 8-bit 索引、同尺寸（381×479）、同位元組大小（185012）** → EDK2 LogoDxe 直接相容（同尺寸最保險）。
+
+> **FV 容量真相**：`[FV.FvMain]` 無 `Size=`，**按內容自動長大**（build 報告的「100% / 0 free」只是對齊餘數，不是上限）。
+> 真正的牆是它 LZMA 壓進的 `FVMAIN_COMPACT`（1.75MB flash 區，目前 **69% 滿、約 526KB free**）。ACPI 超好壓——實測加 21 個 RP1 節點 raw +4KB、壓縮後僅 +712B。故大量補 ACPI 節點無虞。
   - 改圖工具：`edit-logo.py`（Pillow；只改像素、保留 header/palette/尺寸）。重產：
     `python3 edit-logo.py <原始 Logo.bmp> edk2-non-osi/Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp`
     （改文字就編輯腳本內 `TEXT`；需 `pip install --user --break-system-packages Pillow`）。

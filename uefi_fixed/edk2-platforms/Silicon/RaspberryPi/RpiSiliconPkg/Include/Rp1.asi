@@ -7,24 +7,21 @@
  *        (c) 2023 Mario Bălănică — BSD-2-Clause-Patent.
  *
  *  CHANGES vs upstream: upstream only describes the two USB xHCI controllers
- *  under RP1, so Windows sees nothing else inside RP1. We ADD ACPI Device nodes
- *  for the RP1 peripherals our drivers target (GPIO / I2C / SPI / UART / PWM /
- *  I2S / ADC / Ethernet) so Windows enumerates them with proper MMIO + interrupt
- *  resources and binds our class drivers — the "做法 A" route documented in
- *  MD/Note/20260625-2230-pi5-uefi-acpi-integration.md.
+ *  under RP1. We ADD ACPI Device nodes for the full set of RP1 peripherals our
+ *  drivers target so Windows enumerates them with proper MMIO + interrupt
+ *  resources and binds our class drivers — "做法 A" (MD/Note/20260625-2230...).
  *
- *  How addresses work (upstream mechanism, unchanged): RP1B.PBAR is the
- *  firmware-mapped BAR1 physical base (patched at boot by the platform driver);
- *  each child's window = PBAR + RP1_<periph>_BASE (offsets from Rp1.h). All RP1
- *  children share the level interrupt RP1B.PINT (PCIE2 INTA# SPI 261); the fine
- *  per-pin/per-peripheral demux is done by the RP1 internal interrupt controller
- *  inside our GPIO/bus driver, not by distinct GSIs.
+ *  Addresses (upstream mechanism): RP1B.PBAR = firmware-patched BAR1 base; each
+ *  child window = PBAR + RP1_<periph>_BASE (Rp1.h). All children share the level
+ *  interrupt RP1B.PINT (PCIE2 INTA# SPI 261); per-device demux is done by the RP1
+ *  internal interrupt controller in our GPIO/bus driver, not by distinct GSIs.
  *
- *  _HID scheme (our class-driver INFs must match ACPI\<_HID>). ACPI requires the
- *  4-char suffix to be HEX digits, so we use vendor "RPIF" + a hex serial:
- *    RPIF0001 GPIO (GpioClx)   RPIF0002 I2C0 (SpbCx)   RPIF0003 I2C1 (SpbCx)
- *    RPIF0004 SPI0 (SpbCx)     RPIF0005 UART0 (SerCx2)  RPIF0006 PWM0
- *    RPIF0007 I2S0 (PortCls)   RPIF0008 ADC (KMDF)      RPIF0009 Ethernet (NDIS)
+ *  _HID scheme: one _HID per controller TYPE (one driver binds it), instances
+ *  differ by _UID (standard ACPI). Suffix must be hex digits:
+ *    RPIF0001 GPIO        RPIF0002 I2C  (_UID 0-6)   RPIF0004 SPI (_UID 0-8)
+ *    RPIF0005 UART (0-5)  RPIF0006 PWM  (_UID 0-1)    RPIF0007 I2S (_UID 0-2)
+ *    RPIF0008 ADC         RPIF0009 Ethernet
+ *  Our class-driver INFs match ACPI\RPIF000n.
  *
  **/
 
@@ -51,13 +48,28 @@
   CreateDwordField (RBUF, RB ## Index._INT, IN ## Index)        \
   IN ## Index = PINT
 
+// One MMIO window + the shared RP1 interrupt. Used for every simple peripheral.
+#define RP1_SIMPLE_DEV(DevName, Hid, Uid, Base, Len)            \
+Device (DevName) {                                              \
+  Name (_HID, Hid)                                              \
+  Name (_UID, Uid)                                              \
+  Method (_CRS, 0, Serialized) {                                \
+    Name (RBUF, ResourceTemplate () {                           \
+      RP1_QWORDMEMORY_BUF (00)                                  \
+      RP1_INTERRUPT_BUF (01)                                    \
+    })                                                          \
+    RP1_QWORDMEMORY_SET (00, Base, Len)                         \
+    RP1_INTERRUPT_SET (01)                                      \
+    Return (RBUF)                                               \
+  }                                                             \
+}
+
 //
 // ============ Upstream: USB xHCI (unchanged) ============
 //
 Device (XHC0) {
   Name (_HID, "PNP0D10")
   Name (_UID, 0x0)
-
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
       RP1_QWORDMEMORY_BUF (00)
@@ -68,11 +80,9 @@ Device (XHC0) {
     Return (RBUF)
   }
 }
-
 Device (XHC1) {
   Name (_HID, "PNP0D10")
   Name (_UID, 0x1)
-
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
       RP1_QWORDMEMORY_BUF (00)
@@ -85,20 +95,19 @@ Device (XHC1) {
 }
 
 //
-// ============ AprWindowsDriver additions: RP1 peripherals ============
+// ============ AprWindowsDriver additions: full RP1 peripheral set ============
 //
 
-// GPIO: GpioClx controller spanning the 3 IO banks (54 pins). Three MMIO
-// regions — io_bank (CTRL), sys_rio (RIO), pads_bank — each covers all 3 banks
-// (bank stride 0x4000). Driver: rp1gpio.sys (GpioClx).
+// GPIO: GpioClx controller spanning the 3 IO banks (54 pins). Three MMIO regions
+// (io_bank / sys_rio / pads_bank), each covering all 3 banks (stride 0x4000).
 Device (GPI0) {
   Name (_HID, "RPIF0001")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)   // io_bank0..2
-      RP1_QWORDMEMORY_BUF (01)   // sys_rio0..2
-      RP1_QWORDMEMORY_BUF (02)   // pads_bank0..2
+      RP1_QWORDMEMORY_BUF (00)
+      RP1_QWORDMEMORY_BUF (01)
+      RP1_QWORDMEMORY_BUF (02)
       RP1_INTERRUPT_BUF (03)
     })
     RP1_QWORDMEMORY_SET (00, RP1_IO_BANK0_BASE,   0xC000)
@@ -109,123 +118,43 @@ Device (GPI0) {
   }
 }
 
-// I2C (DesignWare). Pi5 40-pin: I2C1 is the user bus; I2C0 is system. SpbCx.
-Device (I2C0) {
-  Name (_HID, "RPIF0002")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_I2C0_BASE, 0x1000)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
-Device (I2C1) {
-  Name (_HID, "RPIF0003")
-  Name (_UID, 0x1)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_I2C1_BASE, 0x1000)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
+// UART ×6 (PL011). SerCx2. UART0 = Pi5 40-pin primary (also BT transport).
+RP1_SIMPLE_DEV (UAR0, "RPIF0005", 0, RP1_UART0_BASE, 0x200)
+RP1_SIMPLE_DEV (UAR1, "RPIF0005", 1, RP1_UART1_BASE, 0x200)
+RP1_SIMPLE_DEV (UAR2, "RPIF0005", 2, RP1_UART2_BASE, 0x200)
+RP1_SIMPLE_DEV (UAR3, "RPIF0005", 3, RP1_UART3_BASE, 0x200)
+RP1_SIMPLE_DEV (UAR4, "RPIF0005", 4, RP1_UART4_BASE, 0x200)
+RP1_SIMPLE_DEV (UAR5, "RPIF0005", 5, RP1_UART5_BASE, 0x200)
 
-// SPI (DesignWare). SPI0 = Pi5 40-pin SPI0. SpbCx.
-Device (SPI0) {
-  Name (_HID, "RPIF0004")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_SPI0_BASE, 0x400)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
+// I2C ×7 (DesignWare). SpbCx. I2C1 = Pi5 40-pin user bus.
+RP1_SIMPLE_DEV (I2C0, "RPIF0002", 0, RP1_I2C0_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C1, "RPIF0002", 1, RP1_I2C1_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C2, "RPIF0002", 2, RP1_I2C2_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C3, "RPIF0002", 3, RP1_I2C3_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C4, "RPIF0002", 4, RP1_I2C4_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C5, "RPIF0002", 5, RP1_I2C5_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2C6, "RPIF0002", 6, RP1_I2C6_BASE, 0x1000)
 
-// UART (PL011). UART0 = Pi5 40-pin primary UART (also BT transport). SerCx2.
-Device (UAR0) {
-  Name (_HID, "RPIF0005")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_UART0_BASE, 0x200)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
+// SPI ×9 (DesignWare; SPI0-7 + the AUX SPI8). SpbCx. SPI0 = Pi5 40-pin SPI0.
+RP1_SIMPLE_DEV (SPI0, "RPIF0004", 0, RP1_SPI0_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI1, "RPIF0004", 1, RP1_SPI1_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI2, "RPIF0004", 2, RP1_SPI2_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI3, "RPIF0004", 3, RP1_SPI3_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI4, "RPIF0004", 4, RP1_SPI4_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI5, "RPIF0004", 5, RP1_SPI5_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI6, "RPIF0004", 6, RP1_SPI6_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI7, "RPIF0004", 7, RP1_SPI7_BASE, 0x400)
+RP1_SIMPLE_DEV (SPI8, "RPIF0004", 8, RP1_SPI8_BASE, 0x400)
 
-// PWM0 (fan / general). Driver: rp1pwm.sys.
-Device (PWM0) {
-  Name (_HID, "RPIF0006")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_PWM0_BASE, 0x100)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
+// PWM ×2. Driver: rp1pwm.sys.
+RP1_SIMPLE_DEV (PWM0, "RPIF0006", 0, RP1_PWM0_BASE, 0x100)
+RP1_SIMPLE_DEV (PWM1, "RPIF0006", 1, RP1_PWM1_BASE, 0x100)
 
-// I2S0 audio. Driver: rp1i2saud.sys (PortCls/WaveRT).
-Device (I2S0) {
-  Name (_HID, "RPIF0007")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_I2S0_BASE, 0x1000)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
+// I2S ×3 audio. Driver: rp1i2saud.sys (PortCls/WaveRT).
+RP1_SIMPLE_DEV (I2S0, "RPIF0007", 0, RP1_I2S0_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2S1, "RPIF0007", 1, RP1_I2S1_BASE, 0x1000)
+RP1_SIMPLE_DEV (I2S2, "RPIF0007", 2, RP1_I2S2_BASE, 0x1000)
 
-// ADC. Driver: rp1adc.sys.
-Device (ADC0) {
-  Name (_HID, "RPIF0008")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_ADC_BASE, 0x100)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
-
-// Ethernet (Cadence GEM / macb). Driver: rp1gem.sys (NDIS).
-Device (ETH0) {
-  Name (_HID, "RPIF0009")
-  Name (_UID, 0x0)
-  Method (_CRS, 0, Serialized) {
-    Name (RBUF, ResourceTemplate () {
-      RP1_QWORDMEMORY_BUF (00)
-      RP1_INTERRUPT_BUF (01)
-    })
-    RP1_QWORDMEMORY_SET (00, RP1_ETH_BASE, 0x4000)
-    RP1_INTERRUPT_SET (01)
-    Return (RBUF)
-  }
-}
-
-// NOTE: more instances (UART1-5, I2C2-6, SPI1-8, PWM1, I2S1-2) follow the exact
-// same pattern using their RP1_*_BASE from Rp1.h — add as needed.
+// ADC + Ethernet.
+RP1_SIMPLE_DEV (ADC0, "RPIF0008", 0, RP1_ADC_BASE, 0x100)
+RP1_SIMPLE_DEV (ETH0, "RPIF0009", 0, RP1_ETH_BASE, 0x4000)
