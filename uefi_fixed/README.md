@@ -21,12 +21,17 @@
 > 此法＝「做法 A」（韌體 ACPI 描述）。另一條「做法 B」是 `windows_sources/pcie-rp1/rp1bus`（純後裝、零韌體），
 > 兩者擇一或並存；中斷 demux 兩者都仍需驅動處理。
 
-## 如何 build（WSL Ubuntu）
-1. 先確保 `uefi_sources/` 已備齊三個 repo（見該目錄 `HOWTO-REBUILD.md` 或下方）。
-2. 跑 `bash uefi_fixed/build-uefi.sh`，它會：
-   - 把 `uefi_fixed/` 的檔**覆蓋**到 `uefi_sources/edk2-platforms/` 對應路徑（overlay）。
-   - 設定 EDK2 workspace、build BaseTools、`build -a AARCH64 -t GCC5 -p .../RPi5/RPi5.dsc -b RELEASE`。
-   - 把 `Build/RPi5/RELEASE_GCC5/FV/RPI_EFI.fd` 複製到 `uefi_build/`。
+## 如何 build（WSL Ubuntu）— ✅ 已實測成功
+> **原版（未改）的完整 build 配方 + 所有踩過的坑 → `MD/Skill/pi5-uefi-build.md`（權威，已驗證 2MB RPI_EFI.fd / 1m32s）。**
+> 重點：build harness 是 **`worproject/rpi5-uefi`**（用 worproject fork 的 edk2/edk2-platforms，**非** tianocore master），
+> 放 **WSL 原生 FS `~/rpi5-uefi`**（不要 /mnt/c），toolchain tag 是 **`GCC`**（非 GCC5）。
+
+build 我們的修改版：
+1. 先照 `MD/Skill/pi5-uefi-build.md` 把 `~/rpi5-uefi` 建好（submodule 全齊、能 build 出原版）。
+2. 跑 `wsl bash /mnt/c/ai_project/AprWindowsDriver/uefi_fixed/build-uefi.sh`，它會：
+   - 把 `uefi_fixed/` 的檔 overlay 到 `~/rpi5-uefi/edk2-platforms/` 對應路徑（即蓋掉原版 `Rp1.asi`）。
+   - 跑 worproject `build.sh --model 5`（`-a AARCH64 -t GCC -b RELEASE`）。
+   - 把 `RPI_EFI.fd` 複製到 `uefi_build/`。
 3. 把 `uefi_build/RPI_EFI.fd` 丟 SD 卡取代原檔（見 `uefi_build/README.md`）。
 
 ## uefi_sources 重建（精簡版——只抓 Pi5 用得到的）

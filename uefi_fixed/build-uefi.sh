@@ -1,61 +1,45 @@
 #!/usr/bin/env bash
 #
-# build-uefi.sh — overlay our uefi_fixed/ deltas onto the upstream worproject
-# EDK2 tree and build our RPI_EFI.fd. Run inside WSL Ubuntu.
+# build-uefi.sh — build OUR modified Pi5 UEFI: overlay uefi_fixed/ onto the
+# worproject rpi5-uefi build tree, run its build.sh, copy RPI_EFI.fd to
+# uefi_build/. Run inside WSL Ubuntu (native FS, NOT /mnt/c for the build tree).
 #
-#   wsl bash uefi_fixed/build-uefi.sh
+#   wsl bash /mnt/c/ai_project/AprWindowsDriver/uefi_fixed/build-uefi.sh
 #
-# Output: uefi_build/RPI_EFI.fd (copy onto the SD card to replace the stock UEFI).
+# Prereqs: a working ~/rpi5-uefi tree with all submodules — set up per
+# MD/Skill/pi5-uefi-build.md (the verified recipe). Override its location with
+# RPI5_UEFI_DIR=/path  if you keep it elsewhere.
 #
 set -euo pipefail
 
-# Repo root = parent of this script's dir.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$HERE/.." && pwd)"
-SRC="$ROOT/uefi_sources"
+ROOT="/mnt/c/ai_project/AprWindowsDriver"
 FIXED="$ROOT/uefi_fixed"
 OUT="$ROOT/uefi_build"
+RPI5_UEFI_DIR="${RPI5_UEFI_DIR:-$HOME/rpi5-uefi}"
 
-echo "== Checking prerequisites =="
-for d in edk2 edk2-platforms edk2-non-osi; do
-  [ -d "$SRC/$d" ] || { echo "ERROR: $SRC/$d missing — clone uefi_sources first (see uefi_fixed/README.md)"; exit 1; }
-done
-# Toolchain (install once): build-essential uuid-dev iasl gcc-aarch64-linux-gnu python3 python3-distutils
-for t in iasl aarch64-linux-gnu-gcc python3 make gcc; do
-  command -v "$t" >/dev/null || { echo "ERROR: '$t' not found. Run: sudo apt install build-essential uuid-dev iasl gcc-aarch64-linux-gnu python3 python3-distutils"; exit 1; }
-done
+[ -f "$RPI5_UEFI_DIR/build.sh" ] || { echo "ERROR: $RPI5_UEFI_DIR not set up — see MD/Skill/pi5-uefi-build.md"; exit 1; }
 
-echo "== Overlaying uefi_fixed/ onto edk2-platforms =="
-# Copy every file under uefi_fixed/ (except docs/scripts) to the matching path
-# in edk2-platforms, preserving directory structure.
+# python alias for BaseTools + never hang on a git auth prompt.
+mkdir -p "$HOME/bin"; ln -sf "$(command -v python3)" "$HOME/bin/python"
+export PATH="$HOME/bin:$PATH"
+export GIT_TERMINAL_PROMPT=0
+
+echo "== Overlaying uefi_fixed/ onto $RPI5_UEFI_DIR/edk2-platforms =="
 while IFS= read -r -d '' f; do
   rel="${f#$FIXED/}"
-  case "$rel" in
-    README.md|build-uefi.sh) continue ;;
-  esac
-  dest="$SRC/edk2-platforms/$rel"
+  case "$rel" in README.md|build-uefi.sh) continue ;; esac
+  dest="$RPI5_UEFI_DIR/edk2-platforms/$rel"
   mkdir -p "$(dirname "$dest")"
   cp -v "$f" "$dest"
 done < <(find "$FIXED" -type f -print0)
 
-echo "== Setting up EDK2 build environment =="
-export WORKSPACE="$SRC"
-export PACKAGES_PATH="$SRC/edk2:$SRC/edk2-platforms:$SRC/edk2-non-osi"
-export GCC5_AARCH64_PREFIX=aarch64-linux-gnu-
-cd "$SRC"
-# shellcheck disable=SC1091
-source edk2/edksetup.sh
-make -C edk2/BaseTools   # not parallel-safe; no -j
+echo "== Building (worproject build.sh, model 5) =="
+cd "$RPI5_UEFI_DIR"
+bash build.sh --model 5
 
-echo "== Building RPi5 UEFI (AARCH64, RELEASE) =="
-NUM_CPUS=$(( $(getconf _NPROCESSORS_ONLN) + 2 ))
-build -n "$NUM_CPUS" -a AARCH64 -t GCC5 -b RELEASE \
-      -p Platform/RaspberryPi/RPi5/RPi5.dsc
-
-FD="$SRC/Build/RPi5/RELEASE_GCC5/FV/RPI_EFI.fd"
-[ -f "$FD" ] || { echo "ERROR: build produced no RPI_EFI.fd at $FD"; exit 1; }
-
+FD="$RPI5_UEFI_DIR/RPI_EFI.fd"
+[ -f "$FD" ] || { echo "ERROR: no RPI_EFI.fd produced"; exit 1; }
 mkdir -p "$OUT"
 cp -v "$FD" "$OUT/RPI_EFI.fd"
 echo "== DONE: $OUT/RPI_EFI.fd  ($(stat -c%s "$OUT/RPI_EFI.fd") bytes) =="
-echo "Copy it onto the SD card to replace the stock RPI_EFI.fd (see uefi_build/README.md)."
+echo "Copy onto the SD card to replace the stock RPI_EFI.fd (see uefi_build/README.md)."
