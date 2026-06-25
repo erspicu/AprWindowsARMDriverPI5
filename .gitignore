@@ -35,3 +35,10 @@ tools/knowledgebase/*.pdb
 # OS cruft
 Thumbs.db
 .DS_Store
+
+# Pi5 UEFI (EDK2) upstream reference — large, has own .git; clone separately.
+/uefi_sources/
+
+# UEFI build artifacts (regenerable); keep only the README.
+/uefi_build/*
+!/uefi_build/README.md
