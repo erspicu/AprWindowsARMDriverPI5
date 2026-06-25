@@ -20,11 +20,11 @@
  *  per-pin/per-peripheral demux is done by the RP1 internal interrupt controller
  *  inside our GPIO/bus driver, not by distinct GSIs.
  *
- *  _HID scheme (our class-driver INFs must match ACPI\<_HID>):
- *    RPI0GPIO  GPIO (GpioClx)      RPI0I2Cn  I2C  (SpbCx)
- *    RPI0SPIn  SPI  (SpbCx)        RPI0URTn  UART (SerCx2)
- *    RPI0PWMn  PWM                 RPI0I2Sn  I2S  (PortCls)
- *    RPI0ADC0  ADC                 RPI0ETH0  Ethernet (NDIS)
+ *  _HID scheme (our class-driver INFs must match ACPI\<_HID>). ACPI requires the
+ *  4-char suffix to be HEX digits, so we use vendor "RPIF" + a hex serial:
+ *    RPIF0001 GPIO (GpioClx)   RPIF0002 I2C0 (SpbCx)   RPIF0003 I2C1 (SpbCx)
+ *    RPIF0004 SPI0 (SpbCx)     RPIF0005 UART0 (SerCx2)  RPIF0006 PWM0
+ *    RPIF0007 I2S0 (PortCls)   RPIF0008 ADC (KMDF)      RPIF0009 Ethernet (NDIS)
  *
  **/
 
@@ -92,7 +92,7 @@ Device (XHC1) {
 // regions — io_bank (CTRL), sys_rio (RIO), pads_bank — each covers all 3 banks
 // (bank stride 0x4000). Driver: rp1gpio.sys (GpioClx).
 Device (GPI0) {
-  Name (_HID, "RPI0GPIO")
+  Name (_HID, "RPIF0001")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -111,7 +111,7 @@ Device (GPI0) {
 
 // I2C (DesignWare). Pi5 40-pin: I2C1 is the user bus; I2C0 is system. SpbCx.
 Device (I2C0) {
-  Name (_HID, "RPI0I2C0")
+  Name (_HID, "RPIF0002")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -124,7 +124,7 @@ Device (I2C0) {
   }
 }
 Device (I2C1) {
-  Name (_HID, "RPI0I2C1")
+  Name (_HID, "RPIF0003")
   Name (_UID, 0x1)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -139,7 +139,7 @@ Device (I2C1) {
 
 // SPI (DesignWare). SPI0 = Pi5 40-pin SPI0. SpbCx.
 Device (SPI0) {
-  Name (_HID, "RPI0SPI0")
+  Name (_HID, "RPIF0004")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -154,7 +154,7 @@ Device (SPI0) {
 
 // UART (PL011). UART0 = Pi5 40-pin primary UART (also BT transport). SerCx2.
 Device (UAR0) {
-  Name (_HID, "RPI0URT0")
+  Name (_HID, "RPIF0005")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -169,7 +169,7 @@ Device (UAR0) {
 
 // PWM0 (fan / general). Driver: rp1pwm.sys.
 Device (PWM0) {
-  Name (_HID, "RPI0PWM0")
+  Name (_HID, "RPIF0006")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -184,7 +184,7 @@ Device (PWM0) {
 
 // I2S0 audio. Driver: rp1i2saud.sys (PortCls/WaveRT).
 Device (I2S0) {
-  Name (_HID, "RPI0I2S0")
+  Name (_HID, "RPIF0007")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -199,7 +199,7 @@ Device (I2S0) {
 
 // ADC. Driver: rp1adc.sys.
 Device (ADC0) {
-  Name (_HID, "RPI0ADC0")
+  Name (_HID, "RPIF0008")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
@@ -214,7 +214,7 @@ Device (ADC0) {
 
 // Ethernet (Cadence GEM / macb). Driver: rp1gem.sys (NDIS).
 Device (ETH0) {
-  Name (_HID, "RPI0ETH0")
+  Name (_HID, "RPIF0009")
   Name (_UID, 0x0)
   Method (_CRS, 0, Serialized) {
     Name (RBUF, ResourceTemplate () {
