@@ -69,7 +69,7 @@
 |---|------|------|------|--------|----------------|
 | 1 | **RP1 I2S 音訊（硬體層）** 🔵 | WDM + HAL | `windows_driver/audio/rp1i2s.sys` | DW I2S **完整引擎**（Probe 能力解碼/SetResolution/Config/Start/Stop/Flush）；**x64 模擬 20/20 驗證** | 接真實 MMIO、DMA、codec |
 | 2 | **RP1 I2S 音效卡** | PortCls/WaveRT | `windows_driver/audio/rp1i2saud.sys` | adapter+wave+topo+stream 端點 | DataRangeIntersection、DMA、codec |
-| 3 | **顯示（HDMI 點亮）** | WDDM Display-Only | `windows_driver/display/rp1vc4dod.sys` | 19 DDI + 單一 HDMI child | vc4 HVS/PixelValve/HDMI modeset |
+| 3 | **顯示（HDMI 點亮 / DOD）** 🟢 | WDDM Display-Only | `windows_driver/display/rp1vc4dod.sys` | KMDDOD 骨架（19 DDI + 1 HDMI child）+ **Phase B 純邏輯**：`vc_mailbox.c`(VideoCore property-tag builder)、`edid.c`(EDID parser) **x64 sim 20/20 + ARM64 /kernel 乾淨**；Pi5 顯示位址已萃取（HVS 0x107c580000、HDMI0/1、MOP/MOPLET，見 `20260625-0200-...`）| Phase C/D：VidPn DDI 接線、mailbox modeset、**UEFI GOP 劫持/HVS flip**、實機（見 `display/rp1-vc4-dod/PLAN.md`）|
 | 4 | **PCIe/RP1 bus（先決命脈）** | KMDF bus + ACPI | `windows_driver/pcie-rp1/rp1bus.sys` + `rp1.aml` | 綁 PCI、map BAR1、列舉子裝置、ACPI(GpioInt) | raw resource 切片、GpioClx 中斷 demux、INF |
 | 5 | **RP1 I2C（DesignWare）** 🔵 | SpbCx (KMDF) | `windows_driver/i2c/rp1i2c.sys` | DW I2C **完整傳輸狀態機**（Probe/ConfigureMaster/SetTarget/Write+STOP+TX_ABRT/Read+RFNE）；**x64 模擬 17/17 驗證** | SCL 時脈值需實機校正、中斷模式、SPB sequence |
 | 6 | **RP1 SPI（DesignWare）** 🔵 | SpbCx (KMDF) | `windows_driver/spi/rp1spi.sys` | DW-SSI **完整全雙工引擎**（Probe/ConfigureMaster CTRLR0 mode0-3/SetCs/Transfer）；**x64 模擬 16/16 驗證** | 速率值需實機校正、中斷模式、SPB sequence |
