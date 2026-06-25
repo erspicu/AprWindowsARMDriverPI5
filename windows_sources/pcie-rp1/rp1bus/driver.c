@@ -8,24 +8,67 @@ Abstract:    RP1 PCIe bus driver - DriverEntry, FDO add, BAR1 mapping, and stati
     and the GpioInt-backed interrupt as PDO raw resources, plus the GpioClx
     interrupt-controller role (MSI-X demux), are the next refinements.
 --*/
+#define INITGUID            // instantiate GUID_RP1BUS_INTERFACE_STANDARD here
 #include "common.h"
 
 DRIVER_INITIALIZE DriverEntry;
 
-// Representative subset of RP1 internal peripherals (full map in design note).
-// Offset = (DT address low 32 bits) - 0x40000000;  Irq = RP1_INT_* index.
+// RP1 internal peripheral map (offsets within BAR1; full set per RP1 datasheet
+// + Pi5 device-tree rp1.dtsi). Offset = (DT reg low 32 bits) - 0x40000000;
+// Irq = RP1 internal interrupt-controller index (RP1_INT_*).
 static const RP1_PERIPH g_Rp1Periph[] = {
-    { L"RP1\\UART0", L"0", 0x030000, 0x100,   25 },
-    { L"RP1\\UART1", L"1", 0x034000, 0x100,   42 },
+    { L"RP1\\UART0", L"0", 0x030000, 0x200,   25 },
+    { L"RP1\\UART1", L"1", 0x034000, 0x200,   42 },
+    { L"RP1\\UART2", L"2", 0x038000, 0x200,   43 },
     { L"RP1\\I2C0",  L"0", 0x070000, 0x1000,   7 },
-    { L"RP1\\SPI0",  L"0", 0x050000, 0x130,   19 },
+    { L"RP1\\I2C1",  L"1", 0x074000, 0x1000,   8 },
+    { L"RP1\\SPI0",  L"0", 0x050000, 0x400,   19 },
+    { L"RP1\\SPI1",  L"1", 0x054000, 0x400,   20 },
     { L"RP1\\I2S0",  L"0", 0x0A0000, 0x1000,  14 },
-    { L"RP1\\GPIO0", L"0", 0x0D0000, 0xC000,   0 },
+    { L"RP1\\GPIO0", L"0", 0x0D0000, 0xC000,   0 },  // RIO+pads+gpio bank window
     { L"RP1\\ETH0",  L"0", 0x100000, 0x4000,   6 },
-    { L"RP1\\USB0",  L"0", 0x200000, 0x100000,30 },
+    { L"RP1\\USB0",  L"0", 0x200000, 0x100000,30 },  // xHCI #0
+    { L"RP1\\USB1",  L"1", 0x300000, 0x100000,31 },  // xHCI #1
     { L"RP1\\PWM0",  L"0", 0x098000, 0x100,    5 },
+    { L"RP1\\ADC0",  L"0", 0x0C8000, 0x100,   38 },
     { L"RP1\\DMA0",  L"0", 0x188000, 0x1000,  40 },
 };
+
+//
+// ---- Bus interface exported to child PDOs (GUID_RP1BUS_INTERFACE_STANDARD) ----
+// The interface Context is the child WDFDEVICE; callbacks read its PDO context
+// and the live parent BarBase, so a class driver gets its mapped window + IRQ.
+//
+static VOID Rp1BusIfReference(_In_ PVOID Context)   { WdfObjectReference((WDFOBJECT)Context); }
+static VOID Rp1BusIfDereference(_In_ PVOID Context) { WdfObjectDereference((WDFOBJECT)Context); }
+
+static PVOID
+Rp1BusIfGetRegisterBase(_In_ PVOID Context)
+{
+    PRP1BUS_PDO_CONTEXT pdo = Rp1BusGetPdoContext((WDFDEVICE)Context);
+    if (pdo->Fdo == NULL || pdo->Fdo->BarBase == NULL) {
+        return NULL;
+    }
+    return (PVOID)((PUCHAR)pdo->Fdo->BarBase + pdo->Offset);
+}
+
+static ULONG
+Rp1BusIfGetRegisterSize(_In_ PVOID Context)
+{
+    return Rp1BusGetPdoContext((WDFDEVICE)Context)->Size;
+}
+
+static ULONG
+Rp1BusIfGetInterruptIndex(_In_ PVOID Context)
+{
+    return Rp1BusGetPdoContext((WDFDEVICE)Context)->Irq;
+}
+
+static PHYSICAL_ADDRESS
+Rp1BusIfGetPhysicalBase(_In_ PVOID Context)
+{
+    return Rp1BusGetPdoContext((WDFDEVICE)Context)->ChildPhys;
+}
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry)
@@ -171,13 +214,40 @@ Rp1BusEvtChildListCreateDevice(_In_ WDFCHILDLIST ChildList,
         return status;
     }
 
-    // Record this child's slice of BAR1 (reported as raw MMIO in the next step).
+    // Record this child's slice of BAR1 + a link back to the parent FDO ctx so
+    // the bus interface can hand out (live BarBase + Offset) and the IRQ index.
     pdoCtx = Rp1BusGetPdoContext(child);
     pdoCtx->Index = id->Index;
     pdoCtx->Offset = p->Offset;
     pdoCtx->Size = p->Size;
     pdoCtx->Irq = p->Irq;
     pdoCtx->ChildPhys.QuadPart = fdo->BarPhys.QuadPart + p->Offset;
+    pdoCtx->Fdo = fdo;
+
+    // Export the RP1 bus interface on this child PDO. The class driver queries
+    // it (WdfFdoQueryForInterface) to get its mapped window + interrupt index.
+    {
+        RP1BUS_INTERFACE_STANDARD  ifc;
+        WDF_QUERY_INTERFACE_CONFIG ifCfg;
+
+        RtlZeroMemory(&ifc, sizeof(ifc));
+        ifc.InterfaceHeader.Size                = sizeof(ifc);
+        ifc.InterfaceHeader.Version             = 1;
+        ifc.InterfaceHeader.Context             = (PVOID)child;
+        ifc.InterfaceHeader.InterfaceReference  = Rp1BusIfReference;
+        ifc.InterfaceHeader.InterfaceDereference= Rp1BusIfDereference;
+        ifc.GetRegisterBase   = Rp1BusIfGetRegisterBase;
+        ifc.GetRegisterSize   = Rp1BusIfGetRegisterSize;
+        ifc.GetInterruptIndex = Rp1BusIfGetInterruptIndex;
+        ifc.GetPhysicalBase   = Rp1BusIfGetPhysicalBase;
+
+        WDF_QUERY_INTERFACE_CONFIG_INIT(&ifCfg, (PINTERFACE)&ifc,
+                                        &GUID_RP1BUS_INTERFACE_STANDARD, NULL);
+        status = WdfDeviceAddQueryInterface(child, &ifCfg);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+    }
 
     return STATUS_SUCCESS;
 }

@@ -10,6 +10,7 @@ Abstract:    RP1 PCIe multi-function bus driver (KMDF) - the foundational
 
 #include <ntddk.h>
 #include <wdf.h>
+#include "rp1bus_if.h"
 
 #define RP1BUS_POOLTAG          'sbPR'   // 'RPbs'
 #define RP1_PCI_VENDOR_ID       0x1DE4   // Raspberry Pi Ltd
@@ -34,11 +35,12 @@ typedef struct _RP1BUS_FDO_CONTEXT {
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(RP1BUS_FDO_CONTEXT, Rp1BusGetFdoContext)
 
 typedef struct _RP1BUS_PDO_CONTEXT {
-    ULONG            Index;
-    ULONG            Offset;
-    ULONG            Size;
-    ULONG            Irq;
-    PHYSICAL_ADDRESS ChildPhys;   // BarPhys + Offset
+    ULONG               Index;
+    ULONG               Offset;
+    ULONG               Size;
+    ULONG               Irq;
+    PHYSICAL_ADDRESS    ChildPhys;   // BarPhys + Offset
+    PRP1BUS_FDO_CONTEXT Fdo;         // parent FDO ctx (for live BarBase + Offset)
 } RP1BUS_PDO_CONTEXT, *PRP1BUS_PDO_CONTEXT;
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(RP1BUS_PDO_CONTEXT, Rp1BusGetPdoContext)
 

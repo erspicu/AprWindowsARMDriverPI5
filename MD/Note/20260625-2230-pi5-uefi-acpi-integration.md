@@ -40,3 +40,33 @@
 ## 待查證
 - RP1 PCIe 的真實 VEN/DEV ID；社群韌體 single-function PCIe 限制是否擋住 RP1 多 function。
 - edk2-platforms RPi5 branch 的確切 AcpiTables 路徑與 build manifest。
+
+---
+
+## 實作：rp1bus 補成可動態列舉的 KMDF Bus Driver（2026-06-25 完成）
+依「做法 B」把 `windows_sources/pcie-rp1/rp1bus/` 骨架補完，ARM64 `/kernel` 編譯 + link 乾淨（`rp1bus.sys` 19KB）。
+
+### 架構（已可動態列舉）
+1. **bind PCI**：INF match `PCI\VEN_1DE4&DEV_0001`（RP1 C0），System class，後裝 `pnputil /add-driver rp1bus.inf /install`。
+2. **map BAR1**：`PrepareHardware` 挑最大的 memory resource（RP1 BAR1 是大窗口），`MmMapIoSpaceEx`；BAR1 ≤64KB 表示 RP1 韌體沒起來，warn。
+3. **動態 child list**：`WDFCHILDLIST` + `WdfChildListBeginScan/AddOrUpdateChildDescriptionAsPresent/EndScan`，依 `g_Rp1Periph[]`（UART/I2C/SPI/I2S/GPIO/ETH/USB/PWM/ADC/DMA…，offset=DT reg 低 32 位 -0x40000000，IRQ=RP1 內部 IC index）建子 PDO，HWID 如 `RP1\UART0`。
+
+### 關鍵設計決策：子裝置資源用 **bus interface**，不偽造 CM_RESOURCE_LIST
+- **問題**：RP1 內部周邊**共用同一個 BAR1**（只有 bus driver 該 map），且中斷由 **RP1 內部中斷控制器** demux（GpioClx 角色），不是離散 GSI → KMDF 沒有乾淨 API 把 CM 資源指派給 PDO（要降到 WDM `IRP_MN_QUERY_RESOURCES` 很髒）。
+- **解法**：bus driver 在每個子 PDO 上 `WdfDeviceAddQueryInterface` 匯出 **`GUID_RP1BUS_INTERFACE_STANDARD`**（定義在 `rp1bus_if.h`，GUID `C7E9A1B2-4D3F-4A21-9B6E-2F1A7C0D5E88`）。
+- **子 class driver 怎麼用**：在自己的 `EvtDevicePrepareHardware` 呼叫 `WdfFdoQueryForInterface(GUID_RP1BUS_INTERFACE_STANDARD)`，拿到 4 個回呼：
+  - `GetRegisterBase()` → 該子裝置在 BAR1 裡**已映射的 kernel VA**（= 父 `BarBase` + 該子 `Offset`，即時計算）。
+  - `GetRegisterSize()` / `GetInterruptIndex()`（RP1 內部 IRQ index）/ `GetPhysicalBase()`（DMA/debug 用）。
+- **與既有模式一致**：同 WiFi `wifi/cyw43455/whd_port/sdbus_glue.c` 的「向 parent 查 hardware interface」做法。
+- 介面 `Context` = 子 WDFDEVICE；回呼讀其 PDO context + 父 FDO 的即時 `BarBase`（存 `pdoCtx->Fdo` 指標，故 re-map 後仍正確）；`InterfaceReference/Dereference` 對子 device 做 `WdfObjectReference/Dereference`。
+
+### 檔案
+- `rp1bus_if.h`（新）：公開介面標頭，**隨子 driver 原始碼一起發**。
+- `common.h`：`include rp1bus_if.h`；`RP1BUS_PDO_CONTEXT` 加 `Fdo` 指標。
+- `driver.c`：`#define INITGUID`；擴充 `g_Rp1Periph[]`；4 個介面回呼；child 建立時 `WdfDeviceAddQueryInterface`。
+- `rp1bus.inf`（新）：System class，match `PCI\VEN_1DE4&DEV_0001`，後裝。
+
+### 還沒做（需實機）
+- **RP1 內部中斷控制器**（`RP1_APBS_IRQ_BASE 0x108000`，61 條內部 IRQ ←→ 一條 PCIe MSI-X）的 demux：bus driver 要當 GpioClx 式 IC，把 PCIe MSI-X ISR fan-out 到各子裝置的 ISR。介面已先把 `Irq` index 傳下去；連接 ISR 的時序需實機。
+- 真實 RP1 VEN/DEV ID 確認（INF 目前填 `1DE4/0001`，待 Pi5 `lspci` 核對）。
+- 每個 child class driver（GPIO/I2C/… 的 `EvtDevicePrepareHardware`）改成查本介面取窗口，而非自己 map MMIO。
