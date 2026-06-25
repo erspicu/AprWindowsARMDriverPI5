@@ -3,6 +3,11 @@
 > 來源：WebSearch（worproject repos）+ Gemini 諮詢（`tools/knowledgebase/message/20260625_222647.md`）。
 > 核心問題：我們只寫 Windows 驅動、不寫韌體，如何接上社群 Pi5 UEFI 讓裝置在 Win11-ARM 列舉。
 
+## ★ 決策（2026-06-26）：主線 = 客製 UEFI ACPI（做法 A）
+- **做法 A（客製 UEFI ACPI）＝主線**。理由：**Pi5 要跑 Windows 本來就一定得刷 worproject 客製 UEFI**（無官方 Windows-on-Pi5 韌體），既然韌體刷定了，把 RP1 周邊 ACPI 塞進去**零額外部署成本**，且裝置走標準框架（SpbCx/GpioClx/SerCx2）、I2C 感測器能用 `I2cSerialBusV2` reference 控制器。已實作並 build 成功（`uefi_fixed/` + `uefi_build/RPI_EFI.fd`）。
+- **做法 B（`windows_sources/pcie-rp1/rp1bus` KMDF bus driver）＝降為備案**。唯一勝場是「stock 韌體、不准改 UEFI」——但 Pi5 沒有 stock Windows 韌體，此情境不存在。保留當參考。
+- **共同未解（兩法都要驅動處理）**：RP1 所有子裝置共用一條中斷（`RP1B.PINT`=PCIE2 INTA# 261）→ per-device 中斷 demux 仍需 RP1 內部中斷控制器驅動（GpioClx 角色）。ACPI 只給 MMIO + 一條共享 IRQ。
+
 ## 社群 repo（確定）
 - **`worproject/rpi5-uefi`** = binary release + wrapper（預編 `RPI_EFI.fd`、TF-A、`config.txt`、打包腳本）。**不要 fork 改 code。** 放 SD 卡開機引導用。
 - **`worproject/edk2-platforms`** = **source**（ACPI ASL + 底層 C 驅動）。**要自訂韌體就 fork 這個**，搭 `tianocore/edk2` + `edk2-non-osi` 一起 build。
