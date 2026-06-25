@@ -1,0 +1,14 @@
+# edk2 外部子模組清單（path url commit）。
+# 這些是「穩定上游、可重抓」的子模組，為縮小備份未存內容；用 fetch-submodules.sh 還原到 edk2/<path>。
+# 注意：subhook 原始 Zeex/subhook 已 404 消失 → 改用 tianocore/edk2-subhook 鏡像（HEAD 即 pin commit）。
+CryptoPkg/Library/OpensslLib/openssl https://github.com/openssl/openssl de90e54bbe82e5be4fb9608b6f5c308bb837d355
+CryptoPkg/Library/MbedTlsLib/mbedtls https://github.com/ARMmbed/mbedtls 8c89224991adff88d53cd380f42a2baa36f91454
+ArmPkg/Library/ArmSoftFloatLib/berkeley-softfloat-3 https://github.com/ucb-bar/berkeley-softfloat-3.git b64af41c3276f97f0e181920400ee056b9c88037
+MdeModulePkg/Library/BrotliCustomDecompressLib/brotli https://github.com/google/brotli f4153a09f87cbb9c826d8fc12c74642bb2d879ea
+BaseTools/Source/C/BrotliCompress/brotli https://github.com/google/brotli f4153a09f87cbb9c826d8fc12c74642bb2d879ea
+MdeModulePkg/Universal/RegularExpressionDxe/oniguruma https://github.com/kkos/oniguruma abfc8ff81df4067f309032467785e06975678f0d
+MdePkg/Library/BaseFdtLib/libfdt https://github.com/devicetree-org/pylibfdt.git cfff805481bdea27f900c32698171286542b8d3c
+MdePkg/Library/MipiSysTLib/mipisyst https://github.com/MIPI-Alliance/public-mipi-sys-t.git 370b5944c046bab043dd8b133727b2135af7747a
+UnitTestFrameworkPkg/Library/CmockaLib/cmocka https://github.com/tianocore/edk2-cmocka.git 1cc9cde3448cdd2e000886a26acf1caac2db7cf1
+UnitTestFrameworkPkg/Library/GoogleTestLib/googletest https://github.com/google/googletest.git 86add13493e5c881d7e4ba77fb91c1f57752b3a4
+UnitTestFrameworkPkg/Library/SubhookLib/subhook https://github.com/tianocore/edk2-subhook.git 83d4e1ebef3588fae48b69a7352cc21801cb70bc

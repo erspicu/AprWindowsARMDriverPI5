@@ -1,0 +1,5 @@
+edk2                 worproject/edk2                sdmmc-dev  eca8aaebb3ec6e4707a8e5765dd372feb5bbee6e
+edk2-platforms       worproject/edk2-platforms      rpi5-dev   8e1779b538bcc1e6dc68d7df625394f933651d7a
+edk2-non-osi         tianocore/edk2-non-osi         master     1f4d7849f2344aa770f4de5224188654ae5b0e50
+arm-trusted-firmware worproject/arm-trusted-firmware rpi5      682607fbd775e37fb5631508434dab9e60220c9a
+rpi5-uefi            worproject/rpi5-uefi           master     a6135b06d661b5f11bbf4bd742b42a1919b264dc
