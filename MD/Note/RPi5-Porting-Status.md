@@ -127,7 +127,9 @@
 | RP1 類比音訊 out | `sound/soc/...` | PortCls | |
 | ~~RP1 clocks~~ | `clk-rp1.c` | KMDF clock | ✅ 見 🟢 #20（`rp1clk.sys`）；🔵 sim 11/11 |
 | RP1 firmware/mailbox | `firmware/rp1-fw.c` | KMDF | |
-| RP1 相機 CSI ×2 | `media/.../rp1_cfe` | AVStream | 🟡 minidriver 註冊骨架（見 🟡 #7）；capture filter 未完 |
+| RP1 相機 CSI ×2 | `media/.../rp1_cfe` | AVStream | 🟡 minidriver 骨架 + **ISP 核心邏輯（RAW10 unpack + Bayer RGGB）sim 11/11 + /kernel 乾淨**（`camera/isp/`）；CFE/sensor/DeviceMFT 接線需實機 |
+| HEVC 解碼 (rpivid) | `hevc_d.c` | MFT | 🟡 **SAND(COL128)→linear detile sim 6/6 + /kernel 乾淨**（`hevc/sand.c`，源碼校正）；KMDF/MFT 接線需實機 |
+| HDMI 音訊 (vc4) | `vc4_hdmi.c` | PortCls/WaveRT | 🟡 **ACR(N/CTS)+Audio InfoFrame sim 12/12 + /kernel 乾淨**（`hdmi-audio/`，vc4 公式校正）；WaveRT+DOD private interface 需實機 |
 | RP1 DSI ×2 / DPI / VEC | `drm/rp1/...` | WDDM | 顯示輸出 |
 
 ### B. BCM2712 SoC 平台裝置

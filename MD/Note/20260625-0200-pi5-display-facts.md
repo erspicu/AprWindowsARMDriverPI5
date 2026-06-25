@@ -41,3 +41,14 @@
 **HDMI（base HDMI0 0x107c701400 / HDMI1 0x107c706400）**：`vc4_hdmi_regs.h` 用 **enum + per-variant offset 表**（`HDMI_HOTPLUG`、`HDMI_HORZA/HORZB`(時序)、`HDMI_FIFO_CTL`、`HDMI_SCHEDULER_CONTROL`、`HDMI_CSC_*`、`HDMI_TX_PHY*`）。Pi5 用哪張表查 `vc4_hdmi.c` 的 variant（bcm2712）。
 
 > 結論：DOD 的 **HVS flip** 最少只需寫 `SCALER_DISPLISTX` 指到組好的 dlist（含 framebuffer 實體位址）；modeset（HDMI 時序/PHY）建議仍走 mailbox 韌體（Hybrid 策略）。
+
+## V3D GPU render 暫存器（`sources/drivers/gpu/drm/v3d/v3d_regs.h`，base 0x1002000000）
+| reg | offset | 用途 |
+|-----|--------|------|
+| `V3D_HUB_IDENT0` | `0x8` | hub 版本 |
+| `V3D_CTL_IDENT0` | `0x0` | core 版本（VER=[31:24]）|
+| `V3D_MMU_CTL` | `0x1200` | V3D MMU 控制（page table base / TLB flush）|
+| `V3D_CLE_CT0CA` / `CT0EA` | `0x110` / `0x108` | **Binner** control-list current/end addr（寫 EA>CA 觸發）|
+| `V3D_CLE_CT1CA` / `CT1EA` | `0x114` / `0x10c` | **Render** control-list current/end addr |
+
+> 對上 `MD/Note/gpu/04-...` Phase 3 藍圖（CLE 觸發 binner/render、MMU page table）。確切 CL 封包格式見 `vc4_packet.h`/Mesa。
