@@ -42,3 +42,6 @@ Thumbs.db
 # UEFI build artifacts (regenerable); keep only the README.
 /uefi_build/*
 !/uefi_build/README.md
+
+# GPU driver reference sources (KMDOD/viogpu/Mesa) — large, clone separately.
+/gpu_driver_sources/
