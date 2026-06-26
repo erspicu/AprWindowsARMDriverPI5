@@ -13,6 +13,8 @@
 > 並 build 出**我們的修改版**——把 RP1 周邊(GPIO/I2C/SPI/UART/PWM/I2S/ADC/ETH)寫入 ACPI(`ACPI\RPIF000n`)、編入 `uefi_build/RPI_EFI.fd`。
 > 配方+踩坑 `MD/Skill/pi5-uefi-build.md`；修改源 `uefi_fixed/`；30MB 可編譯備份 `uefi_sources_backup/`(端到端驗證)。
 > → **「讓 RP1 周邊在 Win11-ARM 被 ACPI 列舉」的韌體先決已備齊**；仍待 **Pi5 跑 Win11-ARM 實機**刷韌體 + 載驅動做 bring-up。
+> 🎮 **GPU 開工（2026-06-26）**：V3D **WDDM render KMD 從全 stub 推進成可列舉空殼**（`StartDevice` 映射 V3D MMIO+讀 IDENT、`QueryAdapterInfo` DRIVERCAPS、`BuildPagingBuffer` MMU flush、`SubmitCommand` CT 觸發結構）；**V3D ACPI 節點加進 UEFI Dsdt**（`\_SB.GPU0`/`ACPI\RPIF000D`）列舉迴路閉合。
+> 策略定調 **Vulkan-first**（KMD + port Mesa v3dv → Zink(GL)/DXVK·vkd3d(D3D)，一魚三吃）；參考源 `gpu_driver_sources/`、策略 `20260626-0200/0230`。深層 render/MMU 核心需實機+KDNET。
 
 ## ⚠️ 重要前提與交接模型（雙機分工）
 **無實機 + 無 Windows-on-Pi5 韌體（UEFI ECAM/ACPI、RP1 PCIe 列舉）下，硬體驅動無法「功能完整」**（無法載入/驗證）。本專案採**雙機交接**：
@@ -63,7 +65,7 @@
 ### 🟡 需「大工程或缺件」（x64 可寫結構，完整功能仍需實機/額外專案）
 | 項目 | 卡點 |
 |------|------|
-| GPU V3D（#13） | **UMD**（Mesa v3d 移植＝獨立大專案）＋ V3D MMU/CL 提交需實機 |
+| GPU V3D（#13）🟢→🔵 KMD 空殼 | KMD 已可列舉+映射硬體+MMU/CLE 暫存器接線（見 #13）；**深層 render/MMU 核心 + UMD（port Mesa v3dv→Zink/DXVK/vkd3d，Vulkan-first）需實機+人年級**。策略/參考 `20260626-0200/0230`，源 `gpu_driver_sources/` |
 | WiFi（🟡→🟢 #6） | **改走 WHD+NetAdapterCx**（不寫 dot11/WDI）。SDIO 控制平面 A1-A3 **sim 25/25**；**WHD source 已取得**，port layer（`cy_rtos_win`/`cyhal_sdio_win`/**`sdbus_glue`** 接真 sdbus.sys）全 **ARM64 /kernel 乾淨**；Pi5 實機數據驗證。卡：KMDF DriverEntry+NetAdapterCx 組裝 + WHD 整合 + 韌體載入需實機 |
 | 相機（🟡→🔵 #7） | ISP 核心邏輯（RAW10/Bayer）+ AVStream 骨架已備；CFE DMA/sensor I2C/DeviceMFT 接線 + ISP/sensor 需實機 |
 | HEVC / HDMI 音訊 / CEC / 溫度 / PMIC / OTP（核心邏輯 🔵）| 各自的 MFT/PortCls/I2C/mailbox 接線 + DMA/中斷需實機（核心轉換邏輯已 sim 驗證）|
@@ -90,7 +92,7 @@
 | 10 | **RP1/BCM2712 SD/MMC** 🔵 | SdPort miniport | `windows_driver/storage/rp1sd.sys` | 16 callback + **SDHCI 命令引擎**（reset/clock/power/cmd/resp/int/card-detect）接上；**x64 模擬 18/18 驗證** | DMA 資料路徑、tuning、voltage switch、PIO buffer 需實機 |
 | 11 | **RP1 Ethernet（Cadence GEM）** 🔵 | NDIS 6.30 miniport | `windows_driver/net/rp1gem.sys` | 13 handler + **GEM 引擎**（reset/MAC/NCFGR/ring/TX-RX descriptor/MDIO，編入 .sys）；**x64 模擬 22/22 驗證** | NBL→descriptor 接線、DMA common buffer、PHY、general attributes 需實機/NDIS plumbing |
 | 12 | **Bluetooth（BCM4345C0）** 🔵 | KMDF (UART H4 HCI) | `windows_driver/bluetooth/btbcm.sys` | **Phase A**（H4 framing/RX 重組/.hcd parser/baud+BD_ADDR payload/bring-up 狀態機）**sim 35/35**；**Phase B WDF glue B1-B5 全 /kernel 乾淨**（`uart.c`：UART+GPIO IoTarget、`BtBcmBringUp`、RX pump；`driver.c`：PnP/D0Entry/D0Exit；`BtBcmLoadFirmware` ZwReadFile；`btbcm.inf`+`bt.asl` 草稿）；Pi5 驗證（PL011@7d50c000、3M、GPIO29、.hcd FC4C）| 上層走 **inbox BthUart.sys**（`bthx.h` 不在現代 WDK，IOCTL 未公開）；功能驗證(M2 心跳起)需 Win11 實機 |
-| 13 | **GPU V3D（VideoCore VII）render KMD** | WDDM render (DxgkInitialize) | `windows_driver/gpu/rp1v3d.sys` | **38 DDI 全部定義 + link**（DRIVER_INITIALIZATION_DATA、PnP/render/VidPn 全套） | V3D MMU/CL 提交/fence 引擎 + UMD（user-mode D3D）需實機 |
+| 13 | **GPU V3D（VideoCore VII）render KMD** 🟢→🔵 | WDDM render (DxgkInitialize) | `windows_driver/gpu/rp1v3d.sys`(31KB) | 38 DDI 全 link；**已推進成可列舉空殼**：`StartDevice` 向 dxgkrnl 要資源→映射 V3D MMIO→讀 `CTL/HUB_IDENT0` 證明摸到硬體、`QueryAdapterInfo` 回 `DXGK_DRIVERCAPS`、生命週期(map/unmap/free)、`BuildPagingBuffer` FLUSH_TLB 寫 `V3D_MMU_CTL`、`SubmitCommand` 結構化 CT0/1 觸發。**V3D ACPI 節點已加進 UEFI Dsdt**（`\_SB.GPU0`，`ACPI\RPIF000D`，3 MMIO+IRQ 282/281）→ 列舉迴路閉合。ARM64 link 乾淨。參考源 `gpu_driver_sources/`(KMDOD/viogpu/Mesa) | **深層核心需實機+KDNET**：PTE 編碼(v3d_mmu)、CT job 解析、fence 同步；**UMD = port Mesa v3dv（Vulkan）→ Zink/DXVK/vkd3d**（見 `20260626-0200/0230`）|
 | 14 | **RP1 PWM** 🔵 | KMDF function | `windows_driver/pwm/rp1pwm.sys` | PWM 引擎（channel config/duty/range/enable，GLOBAL_CTRL 多通道）；**x64 模擬 10/10 驗證** | 時脈週期換算、IOCTL 介面、風扇/熱區整合需實機 |
 | 15 | **BCM2712 RNG（iProc RNG200）** 🔵 | KMDF function | `windows_driver/rng/bcmrng.sys` | RNG 引擎（RBG enable/int clear/FIFO count/read word）；**x64 模擬 6/6 驗證** | CNG 熵池介接需實機 |
 | 16 | **VideoCore mailbox（BCM2712）** 🔵 | KMDF function | `windows_driver/mailbox/bcmmbox.sys` | mailbox 引擎（send/recv + FULL/EMPTY 輪詢、channel 編解碼）；**x64 模擬 8/8 驗證** | property-tags 協定層、clock/power 子系統介接需實機 |
