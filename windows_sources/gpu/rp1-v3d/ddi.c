@@ -221,16 +221,53 @@ NTSTATUS V3dPatch(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_PATCH pPatch)
 
 NTSTATUS V3dSubmitCommand(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_SUBMITCOMMAND pSubmitCommand)
 {
-    UNREFERENCED_PARAMETER(hAdapter);
+    PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)hAdapter;
+
     UNREFERENCED_PARAMETER(pSubmitCommand);
-    return STATUS_NOT_IMPLEMENTED;
+    if (adapter == NULL || adapter->Regs == NULL) {
+        return STATUS_DEVICE_NOT_READY;
+    }
+    //
+    // TODO (on-target): parse the submitted DMA buffer for the binner (CT0) and
+    // render (CT1) control-list start/end GPU VAs, then trigger V3D hardware:
+    //   V3dWr(adapter, V3D_CLE_CT0CA, binnerStartVA);
+    //   V3dWr(adapter, V3D_CLE_CT0EA, binnerEndVA);   // EA>CA starts the binner
+    //   V3dWr(adapter, V3D_CLE_CT1CA, renderStartVA);
+    //   V3dWr(adapter, V3D_CLE_CT1EA, renderEndVA);   // EA>CA starts the render
+    // Completion arrives via the V3D IRQ -> V3dInterruptRoutine -> V3dDpcRoutine
+    // -> notify the monitored fence. (CT submit + fence is the core render work.)
+    //
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS V3dBuildPagingBuffer(IN_CONST_HANDLE hAdapter, IN_PDXGKARG_BUILDPAGINGBUFFER pBuildPagingBuffer)
 {
-    UNREFERENCED_PARAMETER(hAdapter);
-    UNREFERENCED_PARAMETER(pBuildPagingBuffer);
-    return STATUS_NOT_IMPLEMENTED;
+    PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)hAdapter;
+
+    switch (pBuildPagingBuffer->Operation) {
+    case DXGK_OPERATION_UPDATE_PAGE_TABLE:
+        //
+        // TODO (on-target): translate the OS-provided physical pages into V3D PTE
+        // entries (cf. Linux v3d_mmu.c v3d_mmu_insert_ptes: PTE = (PA>>12) |
+        // V3D_PTE_VALID [| WRITEABLE]) and write them into the V3D page-table
+        // allocation. dxgkrnl gives src/dst in pBuildPagingBuffer->UpdatePageTable.
+        //
+        break;
+
+    case DXGK_OPERATION_FLUSH_TLB:
+        // Flush the V3D MMU TLB so new page-table entries take effect.
+        if (adapter != NULL && adapter->Regs != NULL) {
+            V3dWr(adapter, V3D_MMU_CTL,
+                  V3dRd(adapter, V3D_MMU_CTL) | V3D_MMU_CTL_TLB_CLEAR);
+        }
+        break;
+
+    default:
+        // Other paging ops (transfer/fill/map-aperture) not used by V3D's own-MMU
+        // model yet; accept so the pager proceeds.
+        break;
+    }
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS V3dQueryCurrentFence(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)

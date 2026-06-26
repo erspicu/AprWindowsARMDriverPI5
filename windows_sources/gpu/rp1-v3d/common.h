@@ -19,6 +19,7 @@ Abstract:    RP1/V3D (VideoCore VII) WDDM full render KMD - scaffold.
 #define V3D_CTL_IDENT0      0x0000   /* core version: VER = bits [31:24]        */
 #define V3D_HUB_IDENT0      0x0008   /* hub version / nslc                       */
 #define V3D_MMU_CTL         0x1200   /* MMU control (page table base / TLB flush)*/
+#define V3D_MMU_CTL_TLB_CLEAR  (1u << 2)  /* v3d_regs.h: TLB_CLEAR = BIT(2)        */
 #define V3D_CLE_CT0CA       0x0110   /* binner control-list current addr         */
 #define V3D_CLE_CT0EA       0x0108   /* binner control-list end addr (EA>CA=go)  */
 #define V3D_CLE_CT1CA       0x0114   /* render control-list current addr         */
