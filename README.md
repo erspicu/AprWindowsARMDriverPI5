@@ -17,6 +17,14 @@
 - **涵蓋裝置**：UART / I2C / SPI / I2S 音訊 / GPIO / PWM / ADC / PIO / DMA / Ethernet(GEM) /
   USB / SD-eMMC / RNG / mailbox / watchdog / clocks / RTC / 顯示(WDDM DOD) / GPU(V3D) /
   相機(CSI) / 藍牙 / WiFi 等。
+- **韌體側（UEFI）✅ 可 build**：Pi5 跑 Windows 本就需刷社群 **worproject EDK2 UEFI**；我們在其 ACPI
+  加入 RP1 全周邊 + V3D 的 Device 節點（`ACPI\RPIF000n`）+ 自訂 logo，**WSL 實測編出 `RPI_EFI.fd`**
+  （[`uefi_fixed/`](uefi_fixed/)；配方 `MD/Skill/pi5-uefi-build.md`）。裝置描述進韌體、驅動本體用 DISM
+  注入 Windows 映像（[`MD/Note/20260626-0130-...`](MD/Note/)）。**主線＝客製 UEFI ACPI（做法 A）**，
+  `rp1bus.sys`（做法 B，純後裝 bus driver）降為備案。
+- **GPU 3D 加速**：策略 **Vulkan-first**——寫一個 WDDM render KMD（`rp1-v3d`）+ port Mesa **v3dv**
+  的 Windows winsys（`v3dv-wddm`），上層 **Zink(OpenGL)/DXVK·vkd3d(D3D)/clvk(OpenCL)** 全解鎖。
+  KMD 可列舉空殼 + 4 個 sim 驗證純邏輯模組（PTE/CL-submit/MMU/ioctl 翻譯），已用 Pi5 實機校正 V3D 7.1.10.16。
 - **單一進度真相**：[`MD/Note/RPi5-Porting-Status.md`](MD/Note/RPi5-Porting-Status.md)。
   硬體全清單對照：[`MD/Note/RPi5-Driver-Porting-Inventory.md`](MD/Note/RPi5-Driver-Porting-Inventory.md)。
 
@@ -57,11 +65,15 @@
 
 | 目錄 | 內容 |
 |------|------|
-| [`windows_sources/`](windows_sources/) | **Windows 端驅動原始碼**，依裝置類別分子目錄（HAL `.c/.h` + sim + `driver.c` + `build.ps1`；ACPI `.asl`）。|
+| [`windows_sources/`](windows_sources/) | **Windows 端驅動原始碼**，依裝置類別分子目錄（HAL `.c/.h` + sim + `driver.c` + `build.ps1`；含 GPU `rp1-v3d` KMD 與 `v3dv-wddm` UMD winsys）。|
 | [`windows_driver/`](windows_driver/) | **建置交付物**：各驅動 INF（已 infverif）。`.sys/.cat` 等二進位為 build 產出，未納版控。|
-| [`MD/`](MD/) | 分析筆記與文件（進度狀態、硬體清單、各階段 know-how）。|
+| [`uefi_fixed/`](uefi_fixed/) | **我們改過的 Pi5 UEFI source**（overlay 上游）：RP1 周邊 + V3D 的 ACPI 節點、自訂開機 logo。|
+| `uefi_build/` | UEFI build 產出 `RPI_EFI.fd`（刷 SD 卡）。二進位不納版控、保留 README。|
+| [`uefi_sources_backup/`](uefi_sources_backup/) | **可編譯的 Pi5 UEFI source 凍結備份**（30MB，端到端驗證；防上游 fork/鏡像消失）。|
+| [`MD/`](MD/) | 分析筆記與文件（進度狀態、硬體清單、各階段 know-how、UEFI/GPU 策略）。|
 | [`tools/`](tools/) | 輔助工具（如 Gemini 知識庫查詢腳本）。|
-| `sources/` | （**未納版控**）Raspberry Pi Linux 核心原始碼 sparse checkout，僅作移植參考。|
+| `sources/` | （**未納版控**）Raspberry Pi Linux 核心原始碼 sparse checkout，移植參考。重建 → `MD/Skill/sources-rebuild.md`。|
+| `uefi_sources/` `gpu_driver_sources/` | （**未納版控**）上游 UEFI(EDK2)／GPU(KMDOD/viogpu/Mesa) 參考源碼。重建 → `MD/Skill/*-rebuild.md`。|
 | `temp/` `private/` | （**未納版控**）暫存／個人檔。|
 
 各主要子目錄另有 `README.md` 說明。
@@ -86,6 +98,8 @@ ACPI：`asl.exe windows_sources\pcie-rp1\acpi\rp1.asl` → `rp1.aml`。
 ## 注意
 
 - 本專案為**移植開發中**：x64 端已把可做的推到 🔵（邏輯完整＋模擬過），純軟體交付物（ACPI/INF）達 ✅；
-  最終功能驗證需 **Raspberry Pi 5 + Windows on ARM** 實機（載入、中斷路由、DMA、KDNET 除錯）。
+  **韌體側（含我們 ACPI 的 `RPI_EFI.fd`）已可 build**。最終功能驗證需 **Raspberry Pi 5 + Windows on ARM**
+  實機（刷韌體、載入、中斷路由、DMA、GPU KDNET BSOD 除錯）。
+- **韌體建置**需 WSL2（虛擬化開啟）+ EDK2；上游 UEFI/GPU 參考源碼未納版控，依各 `MD/Skill/*-rebuild.md` 重建。
 - 暫存器定義/初始化序列移植自 [raspberrypi/linux](https://github.com/raspberrypi/linux)（GPL-2.0）；
   OS 介接層為本專案重寫。
