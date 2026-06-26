@@ -254,10 +254,12 @@ NTSTATUS V3dBuildPagingBuffer(IN_CONST_HANDLE hAdapter, IN_PDXGKARG_BUILDPAGINGB
     switch (pBuildPagingBuffer->Operation) {
     case DXGK_OPERATION_UPDATE_PAGE_TABLE:
         //
-        // TODO (on-target): translate the OS-provided physical pages into V3D PTE
-        // entries (cf. Linux v3d_mmu.c v3d_mmu_insert_ptes: PTE = (PA>>12) |
-        // V3D_PTE_VALID [| WRITEABLE]) and write them into the V3D page-table
-        // allocation. dxgkrnl gives src/dst in pBuildPagingBuffer->UpdatePageTable.
+        // Each OS physical page -> one V3D PTE via the (sim-verified) encoder:
+        //   pte = V3dPteEncode(pagePhys, writeable, pageIndex, remainingBytes);
+        //   *(ULONG*)(ptBase + pageIndex*4) = pte;       // write into PT alloc
+        // V3dPteEncode (v3d_pte.c, sim 10/10) handles VALID/WRITEABLE + super/big
+        // page bits exactly per Linux v3d_mmu_insert_ptes. The page list/dst PT
+        // come from pBuildPagingBuffer->UpdatePageTable (wired on-target).
         //
         break;
 

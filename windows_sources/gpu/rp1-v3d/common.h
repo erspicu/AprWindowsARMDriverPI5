@@ -11,6 +11,7 @@ Abstract:    RP1/V3D (VideoCore VII) WDDM full render KMD - scaffold.
 
 #include <ntddk.h>
 #include <dispmprt.h>
+#include "v3d_pte.h"        /* V3D MMU PTE encoder (sim 10/10) */
 
 #define RP1V3D_POOLTAG  '3DV1'   // 'V3D1'
 
