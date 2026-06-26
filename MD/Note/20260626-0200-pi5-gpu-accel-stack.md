@@ -41,11 +41,13 @@ WDDM KMD（port V3D 提交/MMU；所有 API 共用）        ← 唯一大工程
 Vulkan UMD = port Mesa v3dv（Windows ICD，走 D3DKMT；Mesa 已有 Windows winsys 基礎）
    ├─ Vulkan ...... 原生（Proton-style 遊戲）
    ├─ OpenGL ...... 用 Mesa Zink（GL-on-Vulkan）→ 不必另寫 GL 驅動
-   └─ Direct3D（次要）... DXVK(D3D9/10/11→Vk) / vkd3d-proton(D3D12→Vk)  ← 「Vulkan wrap 成 D3D」
+   ├─ Direct3D（次要）... DXVK(D3D9/10/11→Vk) / vkd3d-proton(D3D12→Vk)  ← 「Vulkan wrap 成 D3D」
+   └─ OpenCL（bonus）... clvk(OpenCL→Vulkan) + clspv(OpenCL C→SPIR-V)
 ```
 - **OpenGL 不必另寫**：Mesa **Zink** 跑在 Vulkan 上 → Vulkan 通則 GL 自動有。
 - **D3D 不必原生寫**：DXVK / vkd3d-proton 即現成 wrapper（Steam Deck/Proton 同套路）。
-- 投資集中在 **WDDM KMD + v3dv 的 D3DKMT winsys**；Vulkan/OpenGL/D3D 全解鎖。
+- **OpenCL = clvk on v3dv（bonus，低優先）**：同疊層模式、不必另寫驅動。**但 V3D 能力有限 → 只能基本子集**（Pi5 實機 Vulkan：`shaderInt16=false`、`variablePointers=false`，僅 `variablePointersStorageBuffer`；連 Pi5 Linux 都沒裝 V3D OpenCL，只有 ocl-icd 殼）。對「玩家 3D 加速」非必需。Rusticl 路線需另 port v3d gallium，更費工。
+- 投資集中在 **WDDM KMD + v3dv 的 D3DKMT winsys**；Vulkan/OpenGL/D3D/OpenCL 全解鎖。優先序：Vulkan → GL(Zink) → D3D(DXVK/vkd3d) → OpenCL(clvk)。
 
 ### 其他
 - 我們的 **DOD（display-only）** ＝ `vc4` 顯示路徑（HVS 掃描），與上面 3D 加速分開、不衝突。
