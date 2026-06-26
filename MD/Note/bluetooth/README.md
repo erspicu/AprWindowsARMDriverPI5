@@ -4,10 +4,17 @@
 > 移植到 **Windows on ARM64** 的研究與實作筆記。來源：本專案分析 + Gemini 5 輪諮詢（`tools/knowledgebase/message/`）。
 > 建立：2026-06-22
 
-## 一句話結論（路線定案）
+## ⚠️ 路線更新（2026-06-25，覆蓋下方原始結論）
 
-> **寫一個 KMDF「Bluetooth Extensible Transport Driver」（`bthx.h` 介面），夾在 inbox `bthport.sys`（上）
-> 與 UART（下）之間**：只做 H4 byte-stream 搬運 + BCM vendor init（.hcd 韌體載入 + baud 切換）；
+> **`bthx.h` 不在現代公開 WDK**（Win8 IHV-only，查證後確認缺）→ 自寫 bthx transport driver **不可行**。
+> **改走 inbox `BthUart.sys`**：UART 下掛 ACPI（`brcm,bcm43438-bt` 類），INF `Needs=BthUart.NT`；
+> 我們只做 **BCM `.hcd` Patch-RAM 載入 + baud 切換**的薄處理（已實作於 `windows_sources/bluetooth/bcm43438`，
+> Phase A sim 35/35 + Phase B WDF glue /kernel 乾淨）。下方「bthx 路線」段落為歷史記錄、**已不採用**。
+
+## ~~一句話結論（路線定案）~~ — 已被上方更新取代
+
+> ~~寫一個 KMDF「Bluetooth Extensible Transport Driver」（`bthx.h` 介面），夾在 inbox `bthport.sys`（上）
+> 與 UART（下）之間~~：只做 H4 byte-stream 搬運 + BCM vendor init（.hcd 韌體載入 + baud 切換）；
 > L2CAP/SDP/配對/profiles 全由 `bthport.sys` 處理。
 
 ## 比 WiFi 簡單一個數量級
@@ -17,7 +24,7 @@
 | 上層協定 | 自寫 WiFiCx/WDI（或 WHD+偽裝 Ethernet） | **inbox `bthport` 全包**，你只做 transport |
 | 你要寫的 | WHD 整合 + NetAdapterCx + SDIO | **H4 transport + BCM init**（~3000-5000 行）|
 | 工程量 | ~2-3 人月 | **~1-1.5 人月**（熟 KMDF）/ 2-3（邊學）|
-| SDK | — | **`bthx.h` 在標準 WDK、ARM64 支援**（先前「缺 SDK」不成立）|
+| SDK | — | ⚠️ **更正：`bthx.h` 不在現代公開 WDK**（Win8 IHV-only）→ 改走 inbox **BthUart.sys**（見頂部路線更新）|
 
 > 為什麼簡單：HCI 是標準協定，Windows 有完整上層 stack。你的 driver 真的就是「**帶 vendor init 的 H4 byte-stream 搬運工**」。
 

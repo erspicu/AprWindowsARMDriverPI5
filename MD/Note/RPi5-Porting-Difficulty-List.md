@@ -70,7 +70,7 @@
 
 ### 難移植的共同特徵（一眼判斷）
 - **OS 框架是一整套協定堆疊**（WiFiCx 的 802.11、WDDM 的顯示/GPU、AVStream 的影像）——這層平台專屬、**Linux 源碼裡沒有對應物可抄**。
-- **需韌體 blob**（WiFi/BT）或**缺 SDK**（BT bthx.h）。
+- **需韌體 blob**（WiFi/BT 的 .hcd/nvram）或**介面不在公開 WDK**（BT `bthx.h` Win8 IHV-only → 已改走 inbox BthUart）。
 - **HAL 只佔一小塊**：就算把晶片暫存器邏輯抄完，也只完成了 ~10%。
 
 ---
