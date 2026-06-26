@@ -19,7 +19,9 @@ int main(void)
    struct drm_v3d_get_param p = { .param = DRM_V3D_PARAM_SUPPORTS_CSD };
    check("GET_PARAM SUPPORTS_CSD ok", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_GET_PARAM, &p) == 0 && p.value == 1);
    p.param = DRM_V3D_PARAM_SUPPORTS_TFU;
-   check("GET_PARAM SUPPORTS_TFU == 1", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_GET_PARAM, &p) == 0 && p.value == 1);
+   check("GET_PARAM SUPPORTS_TFU == 0 (Pi5 TFU:no)", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_GET_PARAM, &p) == 0 && p.value == 0);
+   p.param = DRM_V3D_PARAM_V3D_CORE0_IDENT0;
+   check("GET_PARAM CORE0_IDENT0 == 0x07443356", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_GET_PARAM, &p) == 0 && p.value == 0x07443356);
    p.param = DRM_V3D_PARAM_SUPPORTS_PERFMON;
    check("GET_PARAM PERFMON == 0 (deferred)", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_GET_PARAM, &p) == 0 && p.value == 0);
 

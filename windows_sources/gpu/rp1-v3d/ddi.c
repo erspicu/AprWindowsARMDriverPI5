@@ -26,8 +26,8 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
 {
     PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)MiniportDeviceContext;
     DXGK_DEVICE_INFO devInfo;
-    PCM_PARTIAL_RESOURCE_DESCRIPTOR best = NULL;
     NTSTATUS status;
+    ULONG memIdx = 0;
 
     UNREFERENCED_PARAMETER(DxgkStartInfo);
     if (adapter == NULL) {
@@ -35,7 +35,9 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
     }
     adapter->DxgkInterface = *DxgkInterface;
 
-    /* Ask dxgkrnl for our hardware resources (the V3D MMIO block). */
+    /* Map the V3D MMIO blocks. Our ACPI _CRS lists 3 memory windows in order:
+       [0] hub (0x4000), [1] core0 (0x6000), [2] sms (0x700). hub and core are
+       distinct blocks (HUB_* vs CTL_* are relative to different bases). */
     RtlZeroMemory(&devInfo, sizeof(devInfo));
     status = adapter->DxgkInterface.DxgkCbGetDeviceInformation(
                  adapter->DxgkInterface.DeviceHandle, &devInfo);
@@ -45,29 +47,33 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
             &devInfo.TranslatedResourceList->List[0].PartialResourceList;
         for (i = 0; i < prl->Count; i++) {
             PCM_PARTIAL_RESOURCE_DESCRIPTOR d = &prl->PartialDescriptors[i];
-            if (d->Type == CmResourceTypeMemory &&
-                (best == NULL || d->u.Memory.Length > best->u.Memory.Length)) {
-                best = d;   /* V3D reg block = the (largest) MMIO window */
+            PUCHAR va;
+            if (d->Type != CmResourceTypeMemory) {
+                continue;
             }
+            va = (PUCHAR)MmMapIoSpaceEx(d->u.Memory.Start, d->u.Memory.Length,
+                                        PAGE_READWRITE | PAGE_NOCACHE);
+            switch (memIdx) {
+            case 0: adapter->HubRegs = va; adapter->HubLen = d->u.Memory.Length; break;
+            case 1: adapter->CoreRegs = va; adapter->CoreLen = d->u.Memory.Length; break;
+            case 2: adapter->SmsRegs = va; adapter->SmsLen = d->u.Memory.Length; break;
+            default: if (va) MmUnmapIoSpace(va, d->u.Memory.Length); break;
+            }
+            memIdx++;
         }
     }
-    if (best != NULL) {
-        adapter->RegsPhys = best->u.Memory.Start;
-        adapter->RegsLen  = best->u.Memory.Length;
-        adapter->Regs     = (PUCHAR)MmMapIoSpaceEx(best->u.Memory.Start,
-                                best->u.Memory.Length, PAGE_READWRITE | PAGE_NOCACHE);
-        if (adapter->Regs != NULL) {
-            /* Read V3D IDENT to prove we are talking to real hardware. */
-            adapter->CoreIdent0 = V3dRd(adapter, V3D_CTL_IDENT0);
-            adapter->HubIdent0  = V3dRd(adapter, V3D_HUB_IDENT0);
-            DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
-                "rp1v3d: V3D regs @ %p (len 0x%Ix) CTL_IDENT0=0x%08x HUB_IDENT0=0x%08x VER=%u\n",
-                adapter->Regs, adapter->RegsLen, adapter->CoreIdent0, adapter->HubIdent0,
-                (adapter->CoreIdent0 >> 24) & 0xff);
-        }
+
+    if (adapter->CoreRegs != NULL) {
+        /* Prove we reached real hardware: CTL_IDENT0 (core) VER must be 7;
+           HUB_IDENT0 = 0x42554856 "VHUB". (Real Pi5 V3D 7.1.10.16.) */
+        adapter->CoreIdent0 = V3dRd(adapter->CoreRegs, V3D_CTL_IDENT0);
+        adapter->HubIdent0  = adapter->HubRegs ? V3dRd(adapter->HubRegs, V3D_HUB_IDENT0) : 0;
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+            "rp1v3d: CTL_IDENT0=0x%08x (VER=%u) HUB_IDENT0=0x%08x\n",
+            adapter->CoreIdent0, (adapter->CoreIdent0 >> 24) & 0xff, adapter->HubIdent0);
     } else {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL,
-            "rp1v3d: no MMIO resource from dxgkrnl - V3D regs not mapped\n");
+            "rp1v3d: V3D core MMIO not mapped (got %u memory resources)\n", memIdx);
     }
 
     *NumberOfVideoPresentSources = 0;   /* render-only path; display via DOD */
@@ -78,9 +84,10 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
 NTSTATUS V3dStopDevice(IN_CONST_PVOID MiniportDeviceContext)
 {
     PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)MiniportDeviceContext;
-    if (adapter != NULL && adapter->Regs != NULL) {
-        MmUnmapIoSpace(adapter->Regs, adapter->RegsLen);
-        adapter->Regs = NULL;
+    if (adapter != NULL) {
+        if (adapter->HubRegs)  { MmUnmapIoSpace(adapter->HubRegs, adapter->HubLen);   adapter->HubRegs = NULL; }
+        if (adapter->CoreRegs) { MmUnmapIoSpace(adapter->CoreRegs, adapter->CoreLen); adapter->CoreRegs = NULL; }
+        if (adapter->SmsRegs)  { MmUnmapIoSpace(adapter->SmsRegs, adapter->SmsLen);   adapter->SmsRegs = NULL; }
     }
     return STATUS_SUCCESS;
 }
@@ -224,16 +231,16 @@ NTSTATUS V3dSubmitCommand(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_SUBMITCOMM
     PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)hAdapter;
 
     UNREFERENCED_PARAMETER(pSubmitCommand);
-    if (adapter == NULL || adapter->Regs == NULL) {
+    if (adapter == NULL || adapter->CoreRegs == NULL) {
         return STATUS_DEVICE_NOT_READY;
     }
     //
     // TODO (on-target): parse the submitted DMA buffer for the binner (CT0) and
     // render (CT1) control-list start/end GPU VAs, then trigger V3D hardware:
-    //   V3dWr(adapter, V3D_CLE_CT0CA, binnerStartVA);
-    //   V3dWr(adapter, V3D_CLE_CT0EA, binnerEndVA);   // EA>CA starts the binner
-    //   V3dWr(adapter, V3D_CLE_CT1CA, renderStartVA);
-    //   V3dWr(adapter, V3D_CLE_CT1EA, renderEndVA);   // EA>CA starts the render
+    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT0CA, binnerStartVA);
+    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT0EA, binnerEndVA);   // EA>CA starts the binner
+    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT1CA, renderStartVA);
+    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT1EA, renderEndVA);   // EA>CA starts the render
     // Completion arrives via the V3D IRQ -> V3dInterruptRoutine -> V3dDpcRoutine
     // -> notify the monitored fence. (CT submit + fence is the core render work.)
     //
@@ -256,9 +263,9 @@ NTSTATUS V3dBuildPagingBuffer(IN_CONST_HANDLE hAdapter, IN_PDXGKARG_BUILDPAGINGB
 
     case DXGK_OPERATION_FLUSH_TLB:
         // Flush the V3D MMU TLB so new page-table entries take effect.
-        if (adapter != NULL && adapter->Regs != NULL) {
-            V3dWr(adapter, V3D_MMU_CTL,
-                  V3dRd(adapter, V3D_MMU_CTL) | V3D_MMU_CTL_TLB_CLEAR);
+        if (adapter != NULL && adapter->CoreRegs != NULL) {
+            V3dWr(adapter->CoreRegs, V3D_MMU_CTL,
+                  V3dRd(adapter->CoreRegs, V3D_MMU_CTL) | V3D_MMU_CTL_TLB_CLEAR);
         }
         break;
 

@@ -18,8 +18,10 @@ static int d3dkmt_open_adapter(v3d_wddm_device *d)
    d->adapter = 1; d->device = 1; d->hwqueue = 1;
    d->next_handle = 1;
    d->next_gpu_va = 0x1000;          /* nonzero: HW treats GPU VA 0 specially */
-   /* TODO: D3DKMTQueryAdapterInfo(private) -> real V3D IDENT from the KMD. */
-   d->core0_ident0 = 0; d->core0_ident1 = 0;
+   /* Real Pi5 V3D 7.1.10.16 IDENT (read-only probe 2026-06-26, v3d_regs debugfs);
+      the KMD overrides these at runtime via D3DKMTQueryAdapterInfo(private). */
+   d->core0_ident0 = 0x07443356;  d->core0_ident1 = 0x81001431;  d->core0_ident2 = 0xc0078101;
+   d->hub_ident1   = 0x00081117;  d->hub_ident2   = 0x00001900;  d->hub_ident3   = 0x00020a10;
    return 0;
 }
 
@@ -90,8 +92,8 @@ static int handle_get_param(v3d_wddm_device *d, struct drm_v3d_get_param *p)
    case DRM_V3D_PARAM_V3D_HUB_IDENT1:   p->value = d->hub_ident1;   return 0;
    case DRM_V3D_PARAM_V3D_HUB_IDENT2:   p->value = d->hub_ident2;   return 0;
    case DRM_V3D_PARAM_V3D_HUB_IDENT3:   p->value = d->hub_ident3;   return 0;
-   /* V3D 7.1 feature bits — known statically for this hardware. */
-   case DRM_V3D_PARAM_SUPPORTS_TFU:           p->value = 1; return 0;
+   /* V3D 7.1.10.16 feature bits — calibrated to the real Pi5 (debugfs v3d_ident).*/
+   case DRM_V3D_PARAM_SUPPORTS_TFU:           p->value = 0; return 0; /* TFU: no  */
    case DRM_V3D_PARAM_SUPPORTS_CSD:           p->value = 1; return 0;
    case DRM_V3D_PARAM_SUPPORTS_CACHE_FLUSH:   p->value = 1; return 0;
    case DRM_V3D_PARAM_SUPPORTS_MULTISYNC_EXT: p->value = 1; return 0;
