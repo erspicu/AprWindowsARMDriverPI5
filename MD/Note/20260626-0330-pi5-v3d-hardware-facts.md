@@ -41,6 +41,26 @@ DT `v3d@2000000`：hub @0x1002000000(0x4000)、**core0 @0x1002008000**(0x6000)�
 - `apiVersion 1.3.305`、`driverName V3DV Mesa`、`deviceName V3D 7.1.10.2`。
 - 後續可在 Pi5 跑 `vulkaninfo` 完整 dump 對照我們 UMD 要回報的 features/limits。
 
+## 中斷號實機核對（/proc/interrupts）✅
+```
+GICv2 281 Level  v3d_core0     <- render 用的核心中斷（GSIV 281 = GIC_SPI 249）
+GICv2 282 Level  v3d_hub       <- GSIV 282 = GIC_SPI 250
+```
+→ **與我們 UEFI Dsdt `GPU0._CRS` 的 `Interrupt(){ 282, 281 }` 完全相符**（hub, core0）。核心中斷 = **281**。
+
+## Vulkan features/limits（UMD 校正用）
+完整 dump 存於 `windows_sources/gpu/v3dv-wddm/pi5-vulkaninfo.txt`（2355 行）。重點 limits（V3D 7.1，apiVersion 1.3.305）：
+| limit | 值 |
+|-------|----|
+| maxImageDimension2D | 4096 |
+| maxStorageBufferRange | 1 GB |
+| maxPushConstantsSize | 128 |
+| maxBoundDescriptorSets | 16 |
+| maxComputeSharedMemorySize | 16384 (16KB) |
+| maxComputeWorkGroupInvocations | 256 |
+> 注意：dump 第二個 device（apiVersion 1.4.305）是 llvmpipe 軟體 fallback，非 V3D。
+> v3dv 會自行從硬體算出這些 limits → 此 dump 是「驗證我們 port 後回報一致」的對照基準，非寫死值。
+
 ## 待續（需實機）
 - KMD `QueryAdapterInfo` private → 把真 IDENT 傳給 UMD（取代種子值）。
-- V3D 中斷（GIC SPI 250/249）實際 ISR；CLE 提交後 fence。
+- V3D 中斷 core0=GSIV281 的實際 ISR；CLE 提交後 fence。
