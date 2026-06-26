@@ -1,6 +1,6 @@
 ;
 ; rp1v3d.inf - RP1/V3D (VideoCore VII) WDDM render KMD, ACPI-enumerated.
-; PnP ID ACPI\RPI5V3D0 (placeholder for the V3D GPU device). Render KMD; a
+; PnP ID ACPI\RPIF000D (placeholder for the V3D GPU device). Render KMD; a
 ; functional 3D stack also needs a user-mode D3D driver (UMD).
 ;
 [Version]
@@ -25,7 +25,7 @@ rp1v3d.sys = 1
 %ManufacturerName% = Standard,NTARM64
 
 [Standard.NTARM64]
-%v3d.DeviceDesc% = v3d_Device, ACPI\RPI5V3D0
+%v3d.DeviceDesc% = v3d_Device, ACPI\RPIF000D
 
 [v3d_Device.NT]
 CopyFiles = Drivers_Dir

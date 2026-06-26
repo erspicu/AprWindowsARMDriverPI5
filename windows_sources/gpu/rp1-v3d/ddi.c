@@ -25,10 +25,51 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
     IN_PDXGKRNL_INTERFACE DxgkInterface, OUT_PULONG NumberOfVideoPresentSources, OUT_PULONG NumberOfChildren)
 {
     PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)MiniportDeviceContext;
+    DXGK_DEVICE_INFO devInfo;
+    PCM_PARTIAL_RESOURCE_DESCRIPTOR best = NULL;
+    NTSTATUS status;
+
     UNREFERENCED_PARAMETER(DxgkStartInfo);
-    if (adapter != NULL) {
-        adapter->DxgkInterface = *DxgkInterface;
+    if (adapter == NULL) {
+        return STATUS_INVALID_PARAMETER;
     }
+    adapter->DxgkInterface = *DxgkInterface;
+
+    /* Ask dxgkrnl for our hardware resources (the V3D MMIO block). */
+    RtlZeroMemory(&devInfo, sizeof(devInfo));
+    status = adapter->DxgkInterface.DxgkCbGetDeviceInformation(
+                 adapter->DxgkInterface.DeviceHandle, &devInfo);
+    if (NT_SUCCESS(status) && devInfo.TranslatedResourceList != NULL) {
+        ULONG i;
+        PCM_PARTIAL_RESOURCE_LIST prl =
+            &devInfo.TranslatedResourceList->List[0].PartialResourceList;
+        for (i = 0; i < prl->Count; i++) {
+            PCM_PARTIAL_RESOURCE_DESCRIPTOR d = &prl->PartialDescriptors[i];
+            if (d->Type == CmResourceTypeMemory &&
+                (best == NULL || d->u.Memory.Length > best->u.Memory.Length)) {
+                best = d;   /* V3D reg block = the (largest) MMIO window */
+            }
+        }
+    }
+    if (best != NULL) {
+        adapter->RegsPhys = best->u.Memory.Start;
+        adapter->RegsLen  = best->u.Memory.Length;
+        adapter->Regs     = (PUCHAR)MmMapIoSpaceEx(best->u.Memory.Start,
+                                best->u.Memory.Length, PAGE_READWRITE | PAGE_NOCACHE);
+        if (adapter->Regs != NULL) {
+            /* Read V3D IDENT to prove we are talking to real hardware. */
+            adapter->CoreIdent0 = V3dRd(adapter, V3D_CTL_IDENT0);
+            adapter->HubIdent0  = V3dRd(adapter, V3D_HUB_IDENT0);
+            DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+                "rp1v3d: V3D regs @ %p (len 0x%Ix) CTL_IDENT0=0x%08x HUB_IDENT0=0x%08x VER=%u\n",
+                adapter->Regs, adapter->RegsLen, adapter->CoreIdent0, adapter->HubIdent0,
+                (adapter->CoreIdent0 >> 24) & 0xff);
+        }
+    } else {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL,
+            "rp1v3d: no MMIO resource from dxgkrnl - V3D regs not mapped\n");
+    }
+
     *NumberOfVideoPresentSources = 0;   /* render-only path; display via DOD */
     *NumberOfChildren            = 0;
     return STATUS_SUCCESS;
@@ -36,15 +77,19 @@ NTSTATUS V3dStartDevice(IN_CONST_PVOID MiniportDeviceContext, IN_PDXGK_START_INF
 
 NTSTATUS V3dStopDevice(IN_CONST_PVOID MiniportDeviceContext)
 {
-    if (MiniportDeviceContext != NULL) {
-        ExFreePoolWithTag(MiniportDeviceContext, RP1V3D_POOLTAG);
+    PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)MiniportDeviceContext;
+    if (adapter != NULL && adapter->Regs != NULL) {
+        MmUnmapIoSpace(adapter->Regs, adapter->RegsLen);
+        adapter->Regs = NULL;
     }
     return STATUS_SUCCESS;
 }
 
 NTSTATUS V3dRemoveDevice(IN_CONST_PVOID MiniportDeviceContext)
 {
-    UNREFERENCED_PARAMETER(MiniportDeviceContext);
+    if (MiniportDeviceContext != NULL) {
+        ExFreePoolWithTag(MiniportDeviceContext, RP1V3D_POOLTAG);
+    }
     return STATUS_SUCCESS;
 }
 
@@ -109,8 +154,24 @@ NTSTATUS V3dSetPowerState(IN_CONST_PVOID MiniportDeviceContext, IN_ULONG DeviceU
 NTSTATUS V3dQueryAdapterInfo(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_QUERYADAPTERINFO pQueryAdapterInfo)
 {
     UNREFERENCED_PARAMETER(hAdapter);
-    UNREFERENCED_PARAMETER(pQueryAdapterInfo);
-    return STATUS_NOT_IMPLEMENTED;
+
+    switch (pQueryAdapterInfo->Type) {
+    case DXGKQAITYPE_DRIVERCAPS:
+        /* Minimal caps so dxgkrnl accepts a render-only adapter. Detailed caps
+           (scheduling/paging/preemption) are filled when render lands. */
+        if (pQueryAdapterInfo->OutputDataSize >= sizeof(DXGK_DRIVERCAPS)) {
+            DXGK_DRIVERCAPS *caps = (DXGK_DRIVERCAPS *)pQueryAdapterInfo->pOutputData;
+            RtlZeroMemory(caps, sizeof(DXGK_DRIVERCAPS));
+            caps->HighestAcceptableAddress.QuadPart = (ULONGLONG)-1;  /* 64-bit DMA */
+            caps->MaxAllocationListSlotId           = 1;
+            return STATUS_SUCCESS;
+        }
+        return STATUS_BUFFER_TOO_SMALL;
+
+    default:
+        /* Render/scheduling/segment caps not yet provided (shell). */
+        return STATUS_NOT_IMPLEMENTED;
+    }
 }
 
 /* ---------------- render core (d3dkmddi.h) ---------------- */
