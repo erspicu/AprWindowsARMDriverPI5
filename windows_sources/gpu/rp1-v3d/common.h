@@ -12,6 +12,14 @@ Abstract:    RP1/V3D (VideoCore VII) WDDM full render KMD - scaffold.
 #include <ntddk.h>
 #include <dispmprt.h>
 #include "v3d_pte.h"        /* V3D MMU PTE encoder (sim 10/10) */
+#include "v3d_engine.h"     /* V3D submit + MMU config (sim 11/11) */
+
+/* Per-command private data the UMD (v3dv_wddm) attaches to each submit,
+   carrying the binner/render control-list GPU addresses. */
+typedef struct _V3D_CMD_PRIVATE {
+    ULONG BclStart, BclEnd;   /* binner CL  -> CT0CA/CT0EA */
+    ULONG RclStart, RclEnd;   /* render CL  -> CT1CA/CT1EA */
+} V3D_CMD_PRIVATE, *PV3D_CMD_PRIVATE;
 
 #define RP1V3D_POOLTAG  '3DV1'   // 'V3D1'
 

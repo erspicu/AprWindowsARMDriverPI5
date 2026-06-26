@@ -50,12 +50,16 @@ static int d3dkmt_destroy_allocation(v3d_wddm_bo *bo)
    return 0;
 }
 
-static int d3dkmt_submit(v3d_wddm_device *d, const void *cl, uint32_t size)
+/* Last submitted command — exposed so the sim can verify CL extraction. */
+v3d_wddm_cmd g_v3d_wddm_last_cmd;
+
+static int d3dkmt_submit(v3d_wddm_device *d, const v3d_wddm_cmd *cmd)
 {
-   /* TODO: D3DKMTSubmitCommandToHwQueue() with the CL DMA buffer; our KMD's
-      SubmitCommandVirtual writes V3D CT0/CT1 CA/EA. Completion -> monitored
-      fence (D3DKMTCreateSynchronizationObject2). */
-   (void)d; (void)cl; (void)size;
+   /* TODO: D3DKMTSubmitCommandToHwQueue() carrying *cmd as the per-command
+      private data; the KMD maps it to CT0/CT1 (V3dSubmitFromCl). out_sync ->
+      D3DKMTCreateSynchronizationObject2 monitored fence. */
+   (void)d;
+   if (cmd) g_v3d_wddm_last_cmd = *cmd;
    return 0;
 }
 
@@ -152,11 +156,19 @@ int v3d_wddm_ioctl(int fd, unsigned long request, void *arg)
       return 0;
    }
 
-   case DRM_IOCTL_V3D_SUBMIT_CL:
+   case DRM_IOCTL_V3D_SUBMIT_CL: {
+      struct drm_v3d_submit_cl *cl = (struct drm_v3d_submit_cl *)arg;
+      v3d_wddm_cmd cmd;
+      cmd.bcl_start = cl->bcl_start; cmd.bcl_end = cl->bcl_end;   /* -> CT0CA/EA */
+      cmd.rcl_start = cl->rcl_start; cmd.rcl_end = cl->rcl_end;   /* -> CT1CA/EA */
+      /* cl->out_sync -> the completion fence (TODO: D3DKMT sync object). */
+      return d3dkmt_submit(d, &cmd);
+   }
+
    case DRM_IOCTL_V3D_SUBMIT_CSD:
    case DRM_IOCTL_V3D_SUBMIT_TFU:
-      /* All map to a hardware-queue submit; the CL/CSD/TFU payload differs. */
-      return d3dkmt_submit(d, arg, 0);
+      /* compute / texture-format submits — wire later (Pi5 V3D has no TFU). */
+      return d3dkmt_submit(d, NULL);
 
    default:
       errno = ENOSYS;   /* PERFMON_* / SUBMIT_CPU etc. not ported yet */

@@ -33,6 +33,14 @@ typedef struct v3d_wddm_bo {
 
 #define V3D_WDDM_MAX_BO 4096
 
+/* Per-command private data the UMD hands to the KMD on submit (binner/render CL
+   GPU addresses). Mirrors the KMD's V3D_CMD_PRIVATE; the KMD maps it to CT0/CT1
+   via V3dSubmitFromCl. */
+typedef struct v3d_wddm_cmd {
+   uint32_t bcl_start, bcl_end;   /* binner CL  */
+   uint32_t rcl_start, rcl_end;   /* render CL  */
+} v3d_wddm_cmd;
+
 /* Per-device WDDM winsys state (replaces the Linux render_fd). */
 typedef struct v3d_wddm_device {
    uint32_t   adapter;            /* D3DKMT adapter handle                 */

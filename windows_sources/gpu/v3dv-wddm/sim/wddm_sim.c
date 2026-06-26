@@ -46,8 +46,13 @@ int main(void)
    struct drm_v3d_mmap_bo m = { .handle = c.handle };
    check("MMAP_BO ok", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_MMAP_BO, &m) == 0);
 
-   /* SUBMIT_CL routes to submit (stub success). */
-   check("SUBMIT_CL routes ok", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_SUBMIT_CL, NULL) == 0);
+   /* SUBMIT_CL extracts binner/render CL addresses for the KMD. */
+   extern v3d_wddm_cmd g_v3d_wddm_last_cmd;
+   struct drm_v3d_submit_cl cl = { .bcl_start = 0x1000, .bcl_end = 0x1800,
+                                   .rcl_start = 0x2000, .rcl_end = 0x2400 };
+   check("SUBMIT_CL routes ok", v3d_wddm_ioctl(fd, DRM_IOCTL_V3D_SUBMIT_CL, &cl) == 0);
+   check("SUBMIT_CL extracted BCL", g_v3d_wddm_last_cmd.bcl_start == 0x1000 && g_v3d_wddm_last_cmd.bcl_end == 0x1800);
+   check("SUBMIT_CL extracted RCL", g_v3d_wddm_last_cmd.rcl_start == 0x2000 && g_v3d_wddm_last_cmd.rcl_end == 0x2400);
 
    /* GEM_CLOSE frees; subsequent GET_BO_OFFSET fails. */
    struct drm_gem_close gc = { .handle = c.handle };

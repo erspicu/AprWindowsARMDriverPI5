@@ -230,20 +230,28 @@ NTSTATUS V3dSubmitCommand(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_SUBMITCOMM
 {
     PRP1V3D_ADAPTER adapter = (PRP1V3D_ADAPTER)hAdapter;
 
-    UNREFERENCED_PARAMETER(pSubmitCommand);
     if (adapter == NULL || adapter->CoreRegs == NULL) {
         return STATUS_DEVICE_NOT_READY;
     }
     //
-    // TODO (on-target): parse the submitted DMA buffer for the binner (CT0) and
-    // render (CT1) control-list start/end GPU VAs, then trigger V3D hardware:
-    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT0CA, binnerStartVA);
-    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT0EA, binnerEndVA);   // EA>CA starts the binner
-    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT1CA, renderStartVA);
-    //   V3dWr(adapter->CoreRegs, V3D_CLE_CT1EA, renderEndVA);   // EA>CA starts the render
-    // Completion arrives via the V3D IRQ -> V3dInterruptRoutine -> V3dDpcRoutine
-    // -> notify the monitored fence. (CT submit + fence is the core render work.)
+    // The UMD (v3dv_wddm) attaches the binner/render CL addresses as the command
+    // private data. Map them to CT0/CT1 via the (sim-verified) engine and trigger
+    // V3D by writing CTnEA > CTnCA. Completion -> V3D IRQ -> DpcRoutine -> fence.
     //
+    if (pSubmitCommand->pDmaBufferPrivateData != NULL &&
+        pSubmitCommand->DmaBufferPrivateDataSize >= sizeof(V3D_CMD_PRIVATE)) {
+        PV3D_CMD_PRIVATE pv = (PV3D_CMD_PRIVATE)pSubmitCommand->pDmaBufferPrivateData;
+        V3D_SUBMIT sub;
+        V3dSubmitFromCl(pv->BclStart, pv->BclEnd, pv->RclStart, pv->RclEnd, &sub);
+        if (sub.HasBinner) {
+            V3dWr(adapter->CoreRegs, V3D_CLE_CT0CA, sub.Ct0Ca);
+            V3dWr(adapter->CoreRegs, V3D_CLE_CT0EA, sub.Ct0Ea);   /* EA>CA -> go */
+        }
+        if (sub.HasRender) {
+            V3dWr(adapter->CoreRegs, V3D_CLE_CT1CA, sub.Ct1Ca);
+            V3dWr(adapter->CoreRegs, V3D_CLE_CT1EA, sub.Ct1Ea);   /* EA>CA -> go */
+        }
+    }
     return STATUS_SUCCESS;
 }
 

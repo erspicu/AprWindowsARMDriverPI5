@@ -16,6 +16,10 @@ struct drm_v3d_mmap_bo       { uint32_t handle; uint32_t flags; uint64_t offset;
 struct drm_v3d_get_bo_offset { uint32_t handle; uint32_t offset; };
 struct drm_v3d_wait_bo       { uint32_t handle; uint32_t pad; uint64_t timeout_ns; };
 struct drm_gem_close         { uint32_t handle; uint32_t pad; };
+struct drm_v3d_submit_cl {
+   uint32_t bcl_start; uint32_t bcl_end; uint32_t rcl_start; uint32_t rcl_end;
+   uint32_t in_sync_bcl; uint32_t in_sync_rcl; uint32_t out_sync;
+};
 
 /* ioctl request codes — only need to be distinct for the switch (real values
  * come from DRM_IOWR(...) in the uapi header). */
