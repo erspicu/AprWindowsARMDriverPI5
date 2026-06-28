@@ -7,7 +7,14 @@
 | **裝置** | BCM2712 VideoCore VII / **V3D** GPU |
 | **Linux 源碼** | `drivers/gpu/drm/v3d/v3d_drv.c`（KMD）+ Mesa（UMD，user space） |
 | **Windows 框架** | **WDDM**（KMD + UMD 兩半） |
-| **本專案** | render 骨架（`windows_sources/gpu/rp1-v3d/`，`DxgkInitialize`），🔲 |
+| **本專案** | 🔵 **KMD 可列舉空殼 + UMD winsys 後端 + 4 個 sim 模組**（見下方更新） |
+
+> ⚠️ **進度更新（2026-06）**：本章原寫「只到骨架」，現已大幅推進（策略 `MD/Note/20260626-0200~0330`、現況 `RPi5-Porting-Status.md` #13）：
+> - **策略定調 Vulkan-first**：寫一個 WDDM render KMD + port Mesa **v3dv**(Vulkan) 的 Windows winsys，上層 **Zink(GL)/DXVK·vkd3d(D3D)/clvk(OpenCL)** 全解鎖（不自寫 D3D UMD）。
+> - **KMD（`gpu/rp1-v3d`）**：DxgkInitialize render-only 空殼——映射 V3D MMIO(hub/core0/sms 分開)+讀真實 IDENT、QueryAdapterInfo、BuildPagingBuffer(MMU flush)、SubmitCommand(寫 CT0/1 觸發)。**V3D ACPI 節點已加進 UEFI Dsdt**(`\_SB.GPU0`)列舉閉合。
+> - **UMD（`gpu/v3dv-wddm`）**：v3dv 的 `v3d_ioctl` 加第三分支 → DRM ioctl 翻 D3DKMT（比照 v3d_simulator）。
+> - **純邏輯模組 sim**：PTE encoder(10/10)、CL submit+MMU config(11/11，`MMU_CTL==0x060D0C01` 對上實機)、ioctl 翻譯(18/18)。**Pi5 實機校正** V3D 7.1.10.16。
+> - **🔴 待實機**：D3DKMT 實接、monitored fence、render 核心、BSOD 除錯。
 
 ## 1. GPU 驅動是「兩半」
 
@@ -24,8 +31,8 @@
 - 完整 3D 加速 = WDDM KMD + UMD（Mesa 移植）+ 排程 + 記憶體管理，巨大。
 - **初期替代方案**：用 [DOD（C1）](C01-hdmi.md) 的 framebuffer + 軟體繪圖（WARP）就能有桌面，
   日常可用、不需 GPU 加速。
-- 本專案只到「WDDM render 骨架可編譯」（`DRIVER_INITIALIZATION_DATA` + `DxgkInitialize`），
-  真正加速屬遠期 + 需實機 + 大框架。
+- 本專案已推進到「KMD 可列舉空殼（映射硬體/讀 IDENT/MMU·CLE 接線/ACPI 閉合）+ UMD winsys 翻譯層 + 4 個 sim 驗證模組」（見章首更新），
+  但真正的端到端 3D 加速（D3DKMT 實接 + fence + Mesa v3dv build + Zink/DXVK）屬遠期 + 需實機。
 
 ## 3. 教學點
 
