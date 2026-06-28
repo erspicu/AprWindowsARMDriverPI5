@@ -1,5 +1,10 @@
-# V3D GPU（VideoCore VII）移植筆記
+# V3D GPU（VideoCore VII）移植筆記（早期研究）
 
+> ⚠️ **這是 2026-06-22 的早期研究/方向評估。實作進度與最新策略請看**：
+> `../20260626-0200`(策略總綱)、`-0230`(WDDM KMD 架構/參考)、`-0300`(v3dv UMD port 面)、`-0330`(V3D 實機 facts)；
+> 程式碼 `windows_sources/gpu/rp1-v3d`(KMD)、`gpu/v3dv-wddm`(UMD)；現況見 `RPi5-Porting-Status.md` #13 + `MD/HANDOFF.md` §8。
+> 本檔當初預判的 **Vulkan(v3dv)+DXVK** 路線＝後來實際採用的主線（方向正確）。
+>
 > Pi5（BCM2712，GPU = Broadcom **VideoCore VII / V3D 7.1**）的 GPU 移植到 **Windows on ARM64** 的研究筆記。
 > 來源：本專案分析 + Gemini 3 輪諮詢（`tools/knowledgebase/message/`）。建立：2026-06-22
 

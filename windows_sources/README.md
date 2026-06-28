@@ -31,10 +31,12 @@ Raspberry Pi 5（BCM2712 + RP1）→ Windows on ARM (ARM64) 移植的**原始碼
 | `storage/` | SDHCI（SdPort） | Pi5 SD/eMMC 實為 BCM2712 SoC |
 | `dma/` | BCM2712 DMA（含 DMA40 40-bit 引擎） | |
 | `pwm/` `adc/` `pio/` `clk/` `rng/` `mailbox/` `watchdog/` `rtc/` | RP1/BCM2712 各周邊（bespoke KMDF） | 多含 x64 sim |
-| `bluetooth/` | BCM43438 H4（bthport） | |
-| `wifi/` | CYW43455（NDIS，dot11/WDI 待補） | |
-| `display/` | VC4 WDDM Display-Only Driver (DOD) | |
-| `gpu/` | V3D WDDM render 骨架 | |
-| `camera/` | RP1 CFE/PiSP（AVStream） | |
+| `bluetooth/` | BCM43438 H4（**inbox BthUart**，非 bthx） | sim 35/35 |
+| `wifi/` | CYW43455（WHD+NetAdapterCx） | sim 25/25 + WHD port |
+| `display/` | VC4 WDDM Display-Only Driver (DOD) | sim 36/36 |
+| `gpu/rp1-v3d` | V3D WDDM **render KMD** 空殼（映射/IDENT/MMU/CLE/ACPI） | sim：pte 10、engine 11 |
+| `gpu/v3dv-wddm` | Mesa **v3dv 的 Windows winsys**（DRM ioctl→D3DKMT） | sim 18/18 |
+| `pcie-rp1/rp1bus` | RP1 PCIe bus driver（做法 B **備案**；主線走 UEFI ACPI） | |
+| `camera/` | RP1 CFE/PiSP（AVStream）+ ISP 軟邏輯 | sim 11/11 |
 
 各驅動的移植狀態見 [`../MD/Note/RPi5-Porting-Status.md`](../MD/Note/RPi5-Porting-Status.md)。

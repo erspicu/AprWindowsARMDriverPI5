@@ -25,6 +25,7 @@
 - **GPU 3D 加速**：策略 **Vulkan-first**——寫一個 WDDM render KMD（`rp1-v3d`）+ port Mesa **v3dv**
   的 Windows winsys（`v3dv-wddm`），上層 **Zink(OpenGL)/DXVK·vkd3d(D3D)/clvk(OpenCL)** 全解鎖。
   KMD 可列舉空殼 + 4 個 sim 驗證純邏輯模組（PTE/CL-submit/MMU/ioctl 翻譯），已用 Pi5 實機校正 V3D 7.1.10.16。
+- **接手/全專案總說明**：[`MD/HANDOFF.md`](MD/HANDOFF.md)（雙機模型、倉庫結構、關鍵決策、慣例、UEFI/GPU 線、16GB 問題、bring-up 第一步）。
 - **單一進度真相**：[`MD/Note/RPi5-Porting-Status.md`](MD/Note/RPi5-Porting-Status.md)。
   硬體全清單對照：[`MD/Note/RPi5-Driver-Porting-Inventory.md`](MD/Note/RPi5-Driver-Porting-Inventory.md)。
 

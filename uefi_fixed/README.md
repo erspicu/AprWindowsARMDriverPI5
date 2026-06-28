@@ -12,23 +12,27 @@
 
 ## 結構（按組件鏡像上游，build-uefi.sh 逐一 overlay）
 `uefi_fixed/<component>/...` 會覆蓋到 `~/rpi5-uefi/<component>/...`：
-- `edk2-platforms/Silicon/RaspberryPi/RpiSiliconPkg/Include/Rp1.asi` — 我們的 ACPI。
+- `edk2-platforms/Silicon/RaspberryPi/RpiSiliconPkg/Include/Rp1.asi` — RP1 周邊 ACPI。
+- `edk2-platforms/Platform/RaspberryPi/RPi5/AcpiTables/Dsdt.asl` — V3D GPU ACPI 節點（`\_SB.GPU0`）。
+- `edk2-platforms/Platform/RaspberryPi/RPi5/Library/PlatformLib/RaspberryPiMem.c` — 16GB RAM 旋鈕。
 - `edk2-non-osi/Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp` — 我們的開機 logo。
 
 ## 我們改了什麼（目前）
-- **ACPI（`Rp1.asi`）**：上游只描述 RP1 底下的 **USB xHCI**（所以 stock Win11 只有鍵鼠/USB 能動）。
-  我們**新增** RP1 的 **GPIO / I2C / SPI / UART / PWM / I2S / ADC / Ethernet** 的 ACPI `Device` 節點，
-  沿用上游 `RP1_QWORDMEMORY_SET`（`PBAR + RP1_*_BASE`）+ 共享中斷 `PINT`。
-  - `_HID` 用 **`RPIF000n`**（ACPI 規定後綴須 hex），class driver INF 要 match `ACPI\RPIF000n`。
+- **ACPI（`Rp1.asi` + `Dsdt.asl`）**：上游只描述 RP1 底下的 **USB xHCI**。我們**新增** RP1 全周邊
+  （**GPIO/I2C/SPI/UART/PWM/I2S/ADC/Ethernet/CLK/PIO/SD**）+ **V3D GPU**（`Dsdt.asl` 的 `\_SB.GPU0`）的
+  ACPI `Device` 節點，沿用上游 `PBAR + RP1_*_BASE` + 共享中斷機制。
+  - `_HID` 用 **`RPIF000n`**（ACPI 規定後綴須 hex；V3D=`RPIF000D`），class driver INF 已 match `ACPI\RPIF000n`。
   - 細節與決策見 `MD/Note/20260625-2230-pi5-uefi-acpi-integration.md`。
-- **開機 logo（`Logo.bmp`）**：在原 Raspberry Pi logo 底部加上「edited by erspicu_brox」。
+- **16GB RAM 旋鈕（`RaspberryPiMem.c`）**：16GB Pi5 在 Win11-ARM 會卡 logo（見 `MD/HANDOFF.md` §7）。
+  `RPI_RAM_CAP_GB`＝**0（預設＝完整 16GB）**；設 8 可壓到 8GB 繞過開機問題（診斷/暫時用）。
+- **開機 logo（`Logo.bmp`）**：在原 Raspberry Pi logo 底部加上「**AprPI5WinDriver**」。
   - **維持 8-bit 索引、同尺寸（381×479）、同位元組大小（185012）** → EDK2 LogoDxe 直接相容（同尺寸最保險）。
 
 > **FV 容量真相**：`[FV.FvMain]` 無 `Size=`，**按內容自動長大**（build 報告的「100% / 0 free」只是對齊餘數，不是上限）。
 > 真正的牆是它 LZMA 壓進的 `FVMAIN_COMPACT`（1.75MB flash 區，目前 **69% 滿、約 526KB free**）。ACPI 超好壓——實測加 21 個 RP1 節點 raw +4KB、壓縮後僅 +712B。故大量補 ACPI 節點無虞。
   - 改圖工具：`edit-logo.py`（Pillow；只改像素、保留 header/palette/尺寸）。重產：
-    `python3 edit-logo.py <原始 Logo.bmp> edk2-non-osi/Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp`
-    （改文字就編輯腳本內 `TEXT`；需 `pip install --user --break-system-packages Pillow`）。
+    `python3 edit-logo.py <原始 Logo.bmp> <輸出 Logo.bmp> "你要的文字"`
+    （文字為第 3 參數，省略則用預設；原圖取 pristine：`git -C ~/rpi5-uefi/edk2-non-osi show HEAD:Platform/RaspberryPi/Drivers/LogoDxe/Logo.bmp`；需 `pip install --user --break-system-packages Pillow`）。
 
 > 此法＝「做法 A」（韌體 ACPI 描述）。另一條「做法 B」是 `windows_sources/pcie-rp1/rp1bus`（純後裝、零韌體），
 > 兩者擇一或並存；中斷 demux 兩者都仍需驅動處理。

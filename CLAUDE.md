@@ -1,6 +1,7 @@
 # 專案守則 (Project Charter)
 
 > 本檔只放**基本守則/規範/定義**。細節依分類引導：
+> - **接手/全專案總說明（先讀這個）→ `MD/HANDOFF.md`**
 > - 操作型 how-to（建置、Pi5 SSH 萃取…）→ `MD/Skill/`
 > - 各階段 know-how 筆記 → `MD/Note/`（檔名 `年月日-時間-主題.md`）
 > - 開發歷程（已完成 loop）→ `MD/History/`

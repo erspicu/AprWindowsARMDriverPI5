@@ -1,7 +1,8 @@
 # `uefi_build/` — UEFI build 產出（丟 SD 卡取代原版）
 
 > 這裡放 `uefi_fixed/build-uefi.sh` 產出的 **`RPI_EFI.fd`**（我們改版的 Pi5 UEFI 韌體）。
-> `.fd` 等二進位**不納版控**（可由 `uefi_sources` + `uefi_fixed` 重 build），只追蹤本說明。
+> **`RPI_EFI.fd` 已納版控**（方便直接下載刷卡，免自己 build）；也可由 `uefi_sources`+`uefi_fixed` 重 build。
+> 含我們的 RP1+V3D ACPI + 自訂 logo（AprPI5WinDriver）。16GB Pi5 開機問題見 `MD/HANDOFF.md` §7。
 
 ## 怎麼產生
 ```bash
