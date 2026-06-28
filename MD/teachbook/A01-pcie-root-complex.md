@@ -1,7 +1,11 @@
-# A1：PCIe Root Complex 與 rp1bus（命脈）
+# A1：PCIe Root Complex 與 RP1 列舉（命脈）
 
 > 整個移植最關鍵的一章——沒有它，RP1 底下所有 I/O 都看不到。觀念基礎見 [第 05 章](05-pcie-and-rp1-enumeration.md)，
 > 本章聚焦「要寫哪些東西」。
+>
+> ⚠️ **策略更新（2026-06）**：RP1 子裝置的列舉現以 **做法 A＝客製 UEFI ACPI 描述為主線**（見 [第 11 章](11-custom-uefi-firmware.md)）——
+> UEFI 直接在 ACPI 描述 RP1 周邊，子裝置免 bus driver 即列舉。本章的 **`rp1bus.sys`（做法 B：KMDF bus driver 動態列舉）降為備案**
+> （適用「不能改韌體」情境，Pi5 上不存在）。**PCIe RC 本身仍是命脈**（不論哪條路都要先打通 PCIe）。兩法的中斷 demux 都仍需驅動。
 
 | | |
 |---|---|

@@ -23,7 +23,7 @@
 |---|------|-----------|------|----|
 | 1.1 | UEFI + ACPI 表（PNP0A08 host bridge + RP1 子裝置 + BCM2712 SoC 裝置）| 裝置管理員看到 PCIe RC + RP1 節點無錯 | `windows_sources/pcie-rp1/acpi/rp1.aml`（已寫，4529B）| 🧑 刷韌體 / 🤖 改 ASL |
 | 1.2 | **IOMMU/SMMU**：ACPI IORT（BCM2712 MMU-500）| DMA 不觸發 SMMU fault | 筆記 `MD/Note/.../iommu`（要寫進 UEFI）| 🧑 |
-| 1.3 | **RP1 PCIe bus driver**（命脈）：BAR1 映射 + 動態列舉子 PDO + bus interface | RP1 底下 GPIO/I2C/… **列舉成功**且能查 `GUID_RP1BUS_INTERFACE_STANDARD` 取窗口/IRQ | `pcie-rp1/rp1bus`（**bind PCI+map BAR1+WDFCHILDLIST+介面，ARM64 link 乾淨**；INF 後裝）；**MSI-X→內部 IC demux 仍需實機** | 🧑+🤖 |
+| 1.3 | **RP1 子裝置列舉（命脈）** — 主線：刷含 RP1 ACPI 的 `RPI_EFI.fd`（做法 A）；備案：載 `rp1bus.sys`（做法 B） | RP1 底下 GPIO/I2C/… 在裝置管理員**列舉成功**（`ACPI\RPIF000n`） | 主線 `uefi_build/RPI_EFI.fd`（含 `Rp1.asi`）；備案 `pcie-rp1/rp1bus`（bind PCI+WDFCHILDLIST+介面）；**MSI-X→內部 IC demux 兩法都需實機** | 🧑+🤖 |
 > ⚠️ **1.3 不通，下面所有 RP1 周邊都列舉不到** → 這是最硬的一關，要一起攻（PCIe link up / ECAM / IORT）。
 
 ## Phase 2 — 標準周邊（低風險，🤖 可大量自動推 ✅）

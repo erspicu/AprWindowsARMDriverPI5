@@ -1,5 +1,7 @@
 # 藍牙移植：架構決策 + 開源參考
 
+> ⚠️ **路線更新（2026-06-25）**：本檔原以自寫 `bthx.h` transport driver 為路線，但 `bthx.h` 不在現代公開 WDK（Win8 IHV-only）→ **已改走 inbox `BthUart.sys`**（只做 BCM `.hcd` + baud 薄處理）。下方 bthx 相關內容為歷史記錄，**實作以 BthUart 為準**（見 `bluetooth/README.md` 頂部 + `windows_sources/bluetooth/bcm43438`）。
+
 ## 1. 架構：Bluetooth Extensible Transport Driver
 
 ```

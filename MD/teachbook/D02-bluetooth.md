@@ -1,6 +1,10 @@
 # D2：Bluetooth（BCM43438，UART HCI）
 
 > 教「**走標準協定（HCI over UART）的裝置怎麼移植**」——重點在協定 framing 與韌體載入，不只暫存器。
+>
+> ⚠️ **路線更新（2026-06-25）**：原規劃自寫 `bthx.h` transport driver，但查證後 **`bthx.h` 不在現代公開 WDK**（Win8 IHV-only）。
+> 已改走 **inbox `BthUart.sys`**（UART 下掛 ACPI + INF `Needs=BthUart.NT`），我們只做 BCM `.hcd` 韌體載入 + baud 切換的薄處理。
+> 本章下方若提到 bthx transport，請以此更正為準；實作見 `windows_sources/bluetooth/bcm43438`。
 
 | | |
 |---|---|

@@ -1,5 +1,7 @@
 # 藍牙移植：可落地實作指南
 
+> ⚠️ **路線更新（2026-06-25）**：本檔原以自寫 `bthx.h` transport driver 為路線，但 `bthx.h` 不在現代公開 WDK（Win8 IHV-only）→ **已改走 inbox `BthUart.sys`**（只做 BCM `.hcd` + baud 薄處理）。下方 bthx 相關內容為歷史記錄，**實作以 BthUart 為準**（見 `bluetooth/README.md` 頂部 + `windows_sources/bluetooth/bcm43438`）。
+
 > 承 [`01-strategy-and-references.md`](01-strategy-and-references.md)。標註「需查 bthx.h / 需實機」處實作時釐清。
 
 ## 0. WDF 物件圖
