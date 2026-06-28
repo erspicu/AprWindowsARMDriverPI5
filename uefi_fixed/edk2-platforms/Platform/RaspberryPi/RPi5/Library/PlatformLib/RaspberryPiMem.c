@@ -81,15 +81,15 @@ ArmPlatformGetVirtualMemoryMap (
   DEBUG ((DEBUG_INFO, "Total RAM: 0x%ll08X\n", TotalMemorySize));
 
   //
-  // AprWindowsDriver: cap reported RAM to 8GB on the 16GB Pi5.
-  // Symptom: Windows 11 on ARM hangs right after the UEFI logo (no boot spinner)
-  // — the kernel faults early on the full 16GB map. config.txt total_mem does NOT
-  // help, because the size here comes from the board REVISION CODE, not the
-  // VideoCore mailbox. Capping makes the 16GB board look like an 8GB one so
-  // Windows boots (sacrifices RAM above 8GB). Set RPI_RAM_CAP_GB to taste, or
-  // 0 to disable the cap once full-16GB support is debugged on-target.
+  // AprWindowsDriver: optional RAM cap for the 16GB Pi5.
+  // The 16GB board can hang right after the UEFI logo under Win11-ARM (kernel
+  // faults early on the full 16GB map; config.txt total_mem does NOT help because
+  // the size comes from the board REVISION CODE here, not the VideoCore mailbox).
+  // RPI_RAM_CAP_GB = 0 -> report the full 16GB (DEFAULT, restored). Set to e.g.
+  // 8 to clamp and unblock Windows boot while full-16GB support is debugged
+  // on-target (serial log: see MD/Note/HANDOFF.md 16GB section).
   //
-  #define RPI_RAM_CAP_GB  8ULL
+  #define RPI_RAM_CAP_GB  0ULL
   if (RPI_RAM_CAP_GB != 0 && TotalMemorySize > RPI_RAM_CAP_GB * SIZE_1GB) {
     TotalMemorySize = RPI_RAM_CAP_GB * SIZE_1GB;
     DEBUG ((DEBUG_WARN, "AprWindowsDriver: capped Total RAM to 0x%ll08X\n", TotalMemorySize));

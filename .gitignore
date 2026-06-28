@@ -23,6 +23,12 @@
 *.tlog
 *.lastbuildstate
 
+# ...but DO ship the delivered drivers under windows_driver/ (build intermediates
+# under **/build/ stay ignored). Lets people download compiled .sys/.cat/.inf.
+!windows_driver/**/*.sys
+!windows_driver/**/*.cat
+!windows_driver/**/*.aml
+
 # Visual Studio
 .vs/
 *.user
@@ -39,9 +45,8 @@ Thumbs.db
 # Pi5 UEFI (EDK2) upstream reference — large, has own .git; clone separately.
 /uefi_sources/
 
-# UEFI build artifacts (regenerable); keep only the README.
-/uefi_build/*
-!/uefi_build/README.md
+# UEFI build output (RPI_EFI.fd) — shipped so people can flash directly.
+# (whole uefi_build/ tracked)
 
 # GPU driver reference sources (KMDOD/viogpu/Mesa) — large, clone separately.
 /gpu_driver_sources/

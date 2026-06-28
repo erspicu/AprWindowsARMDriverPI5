@@ -5,7 +5,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 src, dst = sys.argv[1], sys.argv[2]
-TEXT = "edited by erspicu_brox"
+TEXT = sys.argv[3] if len(sys.argv) > 3 else "AprPI5WinDriver"
 
 orig = bytearray(open(src, "rb").read())
 img = Image.open(src)
